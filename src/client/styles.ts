@@ -18,7 +18,6 @@ export const C = {
 	card: "dshst-card",
 	header: "dshst-header",
 	title: "dshst-title",
-	contact: "dshst-contact",
 	body: "dshst-body",
 	footer: "dshst-footer",
 	note: "dshst-note",
@@ -56,8 +55,6 @@ const css = `
 .dshst-card{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2);width:800px;max-width:calc(100vw - 48px);height:min(800px,100vh - 48px);box-shadow:var(--dsw-shadow-lv3);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:24px;display:flex;flex-direction:column;overflow:hidden}
 .dshst-header{box-sizing:border-box;flex:none;justify-content:space-between;align-items:center;gap:8px;height:54px;padding:20px 14px 8px 10px;display:flex}
 .dshst-title{color:var(--dsw-alias-label-primary);font-size:16px;font-weight:500;line-height:24px;margin:0;flex:1}
-.dshst-contact{color:var(--dsw-alias-state-info-primary,var(--dsw-alias-label-secondary));font-size:11px;font-weight:400;line-height:16px;text-decoration:underline;margin-left:8px;cursor:pointer;white-space:nowrap}
-.dshst-contact:hover{text-decoration:underline;opacity:.8}
 .dshst-body{flex:1;min-height:0;padding:0 24px 24px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
 .dshst-footer{box-sizing:border-box;flex:none;padding:0 24px 24px}
 .dshst-note{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}
@@ -94,6 +91,21 @@ const css = `
 .dshst-tab-active:hover{background:var(--dsw-specific-sidebar-nav-item-active,var(--dsw-alias-interactive-bg-selected,var(--dsw-alias-interactive-bg-hover)))}
 .dshst-tab-count{opacity:.62}
 .dshst-tab-active .dshst-tab-count{opacity:.78}
+/* ── mobile responsive ─────────────────────────────────────────────────
+   On narrow screens (phones, small tablets) the 800px card becomes a
+   near-full-screen sheet with tighter padding so the form stays usable. */
+@media(max-width:640px){
+.dshst-card{width:100vw!important;max-width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0}
+.dshst-header{padding:12px 12px 6px 8px;height:48px}
+.dshst-body{padding:0 12px 12px;gap:6px}
+.dshst-footer{padding:0 12px 12px}
+.dshst-row{flex-wrap:wrap;gap:4px;padding:8px}
+.dshst-name{white-space:normal;overflow:visible;text-overflow:clip}
+.dshst-tabs{gap:2px}
+.dshst-tab{padding:9px 12px 9px 8px}
+.dshst-input,.dshst-select,.dshst-textarea{font-size:16px;line-height:24px}
+.dshst-textarea{min-height:72px}
+}
 /* ── coexistence override ───────────────────────────────────────────────
    The @lemoncat7/dsh-knowledge plugin registers its trigger in the same
    sidebar.footer.action list slot with width:calc(100% + 8px); flex:none,

@@ -11,8 +11,6 @@
 export const zh = {
 	// Trigger / dialog title.
 	title: "自动化任务",
-	// Contact the developer link (dialog title).
-	contact: "联系开发者",
 	// Task state badges.
 	"badge.finished": "已结束",
 	"badge.disabled": "已停用",
@@ -95,15 +93,13 @@ export const zh = {
 	"form.skillsReload": "重新加载",
 	"form.skillsSelected": "已选 {count} 项",
 	"skills.used": "技能：{count} 项",
-	"form.sessionMode": "会话模式",
-	"form.sessionModeFresh": "每次新建会话",
-	"form.sessionModeReuse": "复用上次会话",
-	"form.sessionModeHint": "周期任务可复用同一会话，避免每次执行产生独立会话",
+	"form.sessionModeReuse": "复用上次会话（周期任务在同一会话中继续）",
+	"form.sessionModeHint": "勾选后，周期任务（每周/每月等）会在同一个会话中继续执行，而不是每次创建新会话",
 	"sessionMode.reuse": "复用会话",
 	"form.enabled": "启用",
-	"form.effectiveRange": "生效日期区间（可选，留空表示始终生效）",
-	"form.effectiveFrom": "生效起始",
-	"form.effectiveUntil": "生效截止",
+	"form.effectiveRange": "任务生效日期（可选，留空表示始终允许执行）",
+	"form.effectiveFrom": "任务生效起始",
+	"form.effectiveUntil": "任务生效截止",
 	"form.saving": "保存中…",
 	"form.save": "保存",
 	"form.cancel": "取消",
@@ -112,7 +108,7 @@ export const zh = {
 	"form.error.promptRequired": "请填写提示词。",
 	"form.error.cronRequired": "请填写 Cron 表达式。",
 	"form.error.intervalTooShort": "间隔必须不少于 5 分钟。",
-	"form.error.effectiveRange": "生效起始日期必须早于或等于截止日期。",
+	"form.error.effectiveRange": "任务生效起始日期必须早于或等于截止日期。",
 	// List view.
 	"list.allNote":
 		"全部 {count} 个自动化任务 · 每次运行会消耗所选模型（默认或任务指定）的 token，并会在对话列表中生成一条记录",
@@ -145,7 +141,6 @@ export type ScheduledTasksKey = keyof typeof zh;
 /** English dictionary, checked complete against the zh key set. */
 export const en: Record<ScheduledTasksKey, string> = {
 	title: "Automation",
-	contact: "Contact developer",
 	"badge.finished": "Finished",
 	"badge.disabled": "Disabled",
 	"badge.due": "Due soon",
@@ -222,15 +217,13 @@ export const en: Record<ScheduledTasksKey, string> = {
 	"form.skillsReload": "Reload",
 	"form.skillsSelected": "{count} selected",
 	"skills.used": "Skills: {count}",
-	"form.sessionMode": "Session mode",
-	"form.sessionModeFresh": "New session each run",
-	"form.sessionModeReuse": "Reuse last session",
-	"form.sessionModeHint": "Periodic tasks can reuse the same session to avoid creating a separate session each run",
+	"form.sessionModeReuse": "Reuse last session (periodic tasks continue in the same session)",
+	"form.sessionModeHint": "When checked, periodic tasks (weekly/monthly etc.) continue in the same session instead of creating a new one each run",
 	"sessionMode.reuse": "Reusing session",
 	"form.enabled": "Enabled",
-	"form.effectiveRange": "Effective date range (optional; leave blank for always)",
-	"form.effectiveFrom": "Effective from",
-	"form.effectiveUntil": "Effective until",
+	"form.effectiveRange": "Task effective dates (optional; leave blank for always schedulable)",
+	"form.effectiveFrom": "Task effective from",
+	"form.effectiveUntil": "Task effective until",
 	"form.saving": "Saving…",
 	"form.save": "Save",
 	"form.cancel": "Cancel",
@@ -239,7 +232,7 @@ export const en: Record<ScheduledTasksKey, string> = {
 	"form.error.promptRequired": "Please enter a prompt.",
 	"form.error.cronRequired": "Please enter a Cron expression.",
 	"form.error.intervalTooShort": "The interval must be at least 5 minutes.",
-	"form.error.effectiveRange": "Effective-from date must precede or equal the effective-until date.",
+	"form.error.effectiveRange": "Task effective-from date must precede or equal the effective-until date.",
 	"list.allNote":
 		"All {count} automation tasks · Each run consumes tokens from the selected model (default or task-specific) and adds a record to the conversation list",
 	"list.projectNote":

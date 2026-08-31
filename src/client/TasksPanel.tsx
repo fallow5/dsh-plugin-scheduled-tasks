@@ -886,25 +886,14 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 				)}
 			</div>
 			<div style={layout.field}>
-				<div className={C.label}>{t("form.sessionMode")}</div>
-				<div style={layout.row}>
-					<label style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}>
-						<input
-							type="radio"
-							checked={sessionMode === "fresh"}
-							onChange={() => setSessionMode("fresh")}
-						/>
-						{t("form.sessionModeFresh")}
-					</label>
-					<label style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 12 }}>
-						<input
-							type="radio"
-							checked={sessionMode === "reuse"}
-							onChange={() => setSessionMode("reuse")}
-						/>
-						{t("form.sessionModeReuse")}
-					</label>
-				</div>
+				<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
+					<input
+						type="checkbox"
+						checked={sessionMode === "reuse"}
+						onChange={(event) => setSessionMode(event.target.checked ? "reuse" : "fresh")}
+					/>
+					{t("form.sessionModeReuse")}
+				</label>
 				<div className={C.meta}>{t("form.sessionModeHint")}</div>
 			</div>
 			<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
@@ -1116,9 +1105,6 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 							<IconChecklistOutline14 size={16} />
 							<h2 className={C.title}>
 								{t("title")}
-								<a className={C.contact} href="https://paiban.md/qrcode.png" target="_blank" rel="noreferrer">
-									{t("contact")}
-								</a>
 							</h2>
 							<button type="button" className={C.close} onClick={() => setOpen(false)} aria-label={t("close")}>
 								<IconCloseOutline16 size={16} />
