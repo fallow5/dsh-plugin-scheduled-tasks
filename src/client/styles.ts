@@ -44,6 +44,13 @@ export const C = {
 	tabActive: "dshst-tab-active",
 	tabCount: "dshst-tab-count",
 	close: "dshst-close",
+	slashMenu: "dshst-slash-menu",
+	slashItem: "dshst-slash-item",
+	slashItemActive: "dshst-slash-item-active",
+	slashItemName: "dshst-slash-item-name",
+	slashItemDesc: "dshst-slash-item-desc",
+	skillTag: "dshst-skill-tag",
+	skillTagRemove: "dshst-skill-tag-remove",
 } as const;
 
 const css = `
@@ -91,6 +98,15 @@ const css = `
 .dshst-tab-active:hover{background:var(--dsw-specific-sidebar-nav-item-active,var(--dsw-alias-interactive-bg-selected,var(--dsw-alias-interactive-bg-hover)))}
 .dshst-tab-count{opacity:.62}
 .dshst-tab-active .dshst-tab-count{opacity:.78}
+.dshst-slash-menu{position:absolute;z-index:10;left:0;right:0;top:100%;margin-top:4px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:var(--dsw-shadow-lv2);max-height:240px;overflow-y:auto;--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
+.dshst-slash-item{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;border:none;background:0 0;cursor:pointer;padding:8px 12px;font-family:inherit}
+.dshst-slash-item:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.dshst-slash-item-active{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;border:none;background:var(--dsw-alias-interactive-bg-hover);cursor:pointer;padding:8px 12px;font-family:inherit}
+.dshst-slash-item-name{color:var(--dsw-alias-label-primary);font-size:13px;font-weight:500;line-height:18px}
+.dshst-slash-item-desc{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dshst-skill-tag{display:inline-flex;align-items:center;gap:4px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);border-radius:6px;padding:2px 8px;font-size:12px;line-height:18px;font-family:var(--dsh-font-mono,monospace)}
+.dshst-skill-tag-remove{border:none;background:0 0;color:var(--dsw-alias-label-tertiary);cursor:pointer;font-size:14px;line-height:14px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%}
+.dshst-skill-tag-remove:hover{color:var(--dsw-alias-state-error-primary);background:var(--dsw-alias-interactive-bg-hover-danger)}
 /* ── mobile responsive ─────────────────────────────────────────────────
    On narrow screens (phones, small tablets) the 800px card becomes a
    near-full-screen sheet with tighter padding so the form stays usable. */

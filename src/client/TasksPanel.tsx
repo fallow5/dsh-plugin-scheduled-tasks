@@ -369,6 +369,11 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 	const [skillsCatalog, setSkillsCatalog] = useState<SkillsResult | undefined>();
 	const [skillsError, setSkillsError] = useState("");
 	const [skillsBusy, setSkillsBusy] = useState(false);
+	// Slash autocomplete state for the prompt textarea.
+	const [slashMenuOpen, setSlashMenuOpen] = useState(false);
+	const [slashQuery, setSlashQuery] = useState("");
+	const [slashActiveIndex, setSlashActiveIndex] = useState(0);
+	const promptRef = useRef<HTMLTextAreaElement>(null);
 	// Session mode: "fresh" (default) or "reuse".
 	const [sessionMode, setSessionMode] = useState<"fresh" | "reuse">(() => initial?.sessionMode ?? "fresh");
 	const [busy, setBusy] = useState(false);
@@ -438,6 +443,82 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 			prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name],
 		);
 	}, []);
+
+	/** Filtered skills for the slash autocomplete menu. */
+	const slashFilteredSkills = useMemo(() => {
+		if (skillsCatalog === undefined) return [];
+		const query = slashQuery.toLowerCase();
+		return skillsCatalog.skills.filter(
+			(skill) =>
+				skill.name.toLowerCase().includes(query) ||
+				skill.description.toLowerCase().includes(query),
+		);
+	}, [skillsCatalog, slashQuery]);
+
+	/** Handle prompt textarea changes: detect `/` at word boundary to open the slash menu. */
+	const handlePromptChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+		const value = event.target.value;
+		setPrompt(value);
+		// Detect slash at the start of a word (after space or at beginning).
+		const cursorPos = event.target.selectionStart ?? value.length;
+		const beforeCursor = value.slice(0, cursorPos);
+		const slashMatch = beforeCursor.match(/(?:^|\s)\/([^\s]*)$/);
+		if (slashMatch !== null) {
+			setSlashMenuOpen(true);
+			setSlashQuery(slashMatch[1] ?? "");
+			setSlashActiveIndex(0);
+		} else {
+			setSlashMenuOpen(false);
+		}
+	}, []);
+
+	/** Insert a skill from the slash menu into the prompt and add it to selected skills. */
+	const insertSkillFromMenu = useCallback((skillName: string) => {
+		const textarea = promptRef.current;
+		if (textarea === null) return;
+		const cursorPos = textarea.selectionStart ?? prompt.length;
+		const beforeCursor = prompt.slice(0, cursorPos);
+		const afterCursor = prompt.slice(cursorPos);
+		// Find the `/` that started the menu and replace from there to cursor.
+		const slashIndex = beforeCursor.search(/(?:^|\s)\/[^\s]*$/);
+		if (slashIndex === -1) return;
+		const prefix = beforeCursor.slice(0, slashIndex === 0 ? 0 : slashIndex + 1);
+		const newPrompt = `${prefix}${skillName} ${afterCursor}`;
+		setPrompt(newPrompt);
+		setSlashMenuOpen(false);
+		// Add to selected skills.
+		setSelectedSkills((prev) => (prev.includes(skillName) ? prev : [...prev, skillName]));
+		// Restore focus and place cursor after the inserted text.
+		requestAnimationFrame(() => {
+			const insertPos = (slashIndex === 0 ? 0 : slashIndex + 1) + skillName.length + 1;
+			textarea.focus();
+			textarea.setSelectionRange(insertPos, insertPos);
+		});
+	}, [prompt]);
+
+	/** Handle keydown in the prompt textarea for slash menu navigation. */
+	const handlePromptKeyDown = useCallback((event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+		if (!slashMenuOpen || slashFilteredSkills.length === 0) return;
+		switch (event.key) {
+			case "ArrowDown":
+				event.preventDefault();
+				setSlashActiveIndex((prev) => (prev + 1) % slashFilteredSkills.length);
+				break;
+			case "ArrowUp":
+				event.preventDefault();
+				setSlashActiveIndex((prev) => (prev - 1 + slashFilteredSkills.length) % slashFilteredSkills.length);
+				break;
+			case "Enter":
+			case "Tab":
+				event.preventDefault();
+				insertSkillFromMenu(slashFilteredSkills[slashActiveIndex].name);
+				break;
+			case "Escape":
+				event.preventDefault();
+				setSlashMenuOpen(false);
+				break;
+		}
+	}, [slashMenuOpen, slashFilteredSkills, slashActiveIndex, insertSkillFromMenu]);
 
 	/** Flat option list; a stored selection missing from the catalog is kept as a fallback. */
 	const modelOptions = useMemo<ModelOption[]>(() => {
@@ -606,12 +687,32 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 			</div>
 			<div style={layout.field}>
 				<div className={C.label}>{t("form.prompt")}</div>
-				<textarea
-					className={C.textarea}
-					value={prompt}
-					onChange={(event) => setPrompt(event.target.value)}
-					placeholder={t("form.promptPlaceholder")}
-				/>
+				<div style={{ position: "relative" }}>
+					<textarea
+						ref={promptRef}
+						className={C.textarea}
+						value={prompt}
+						onChange={handlePromptChange}
+						onKeyDown={handlePromptKeyDown}
+						placeholder={t("form.promptPlaceholder")}
+					/>
+					{slashMenuOpen && slashFilteredSkills.length > 0 && (
+						<div className={C.slashMenu}>
+							{slashFilteredSkills.slice(0, 10).map((skill, index) => (
+								<button
+									key={skill.name}
+									type="button"
+									className={index === slashActiveIndex ? C.slashItemActive : C.slashItem}
+									onClick={() => insertSkillFromMenu(skill.name)}
+									onMouseEnter={() => setSlashActiveIndex(index)}
+								>
+									<span className={C.slashItemName}>/{skill.name}</span>
+									<span className={C.slashItemDesc}>{skill.description}</span>
+								</button>
+							))}
+						</div>
+					)}
+				</div>
 			</div>
 			<div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
 				<div style={layout.field}>
@@ -853,37 +954,24 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 						</button>
 					</div>
 				)}
-				{skillsError === "" && (skillsCatalog === undefined || skillsCatalog.skills.length === 0) && (
-					<div className={C.meta}>{skillsBusy ? t("form.skillsLoading") : t("form.skillsEmpty")}</div>
-				)}
-				{skillsCatalog !== undefined && skillsCatalog.skills.length > 0 && (
+				{selectedSkills.length > 0 && (
 					<div style={{ ...layout.row, flexWrap: "wrap", gap: 4 }}>
-						{skillsCatalog.skills.map((skill) => (
-							<label
-								key={skill.name}
-								style={{
-									cursor: "pointer",
-									display: "inline-flex",
-									alignItems: "center",
-									gap: 4,
-									padding: "2px 8px",
-									borderRadius: 4,
-									border: `1px solid ${selectedSkills.includes(skill.name) ? "var(--ds-accent)" : "var(--ds-border)"}`,
-									background: selectedSkills.includes(skill.name) ? "var(--ds-accent-bg)" : "transparent",
-									fontSize: "0.85em",
-								}}
-							>
-								<input
-									type="checkbox"
-									checked={selectedSkills.includes(skill.name)}
-									onChange={() => toggleSkill(skill.name)}
-									style={{ margin: 0 }}
-								/>
-								<span title={skill.description}>{skill.name}</span>
-							</label>
+						{selectedSkills.map((name) => (
+							<span key={name} className={C.skillTag}>
+								/{name}
+								<button
+									type="button"
+									className={C.skillTagRemove}
+									onClick={() => toggleSkill(name)}
+									aria-label={t("form.skillsRemove")}
+								>
+									×
+								</button>
+							</span>
 						))}
 					</div>
 				)}
+				<div className={C.meta}>{t("form.skillsHint")}</div>
 			</div>
 			<div style={layout.field}>
 				<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
