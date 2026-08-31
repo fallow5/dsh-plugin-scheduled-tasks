@@ -14,9 +14,10 @@
 import type { WorkspaceListState } from "@deepseek-ai/dsh-client-runtime/client";
 import { IconChecklistOutline14, IconCloseOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { SnapshotSelectorHook, TranslateNS } from "@deepseek-ai/dsh-client-ui-slots";
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CatalogResult, CreateInput, PresetsResult, RunView, SkillsResult, TaskView, UpdateInput } from "../schemas.js";
 import type { RpcResult, TasksRemote } from "./remote.js";
+import { panelStore } from "./panelState.js";
 import { C } from "./styles.js";
 
 /** The translate seat of this plugin's `scheduled-tasks` locale namespace. */
@@ -26,6 +27,16 @@ export type PanelTranslate = TranslateNS<"scheduled-tasks">;
 export interface TasksFooterActionProps {
 	/** Sidebar column state: wide row vs collapsed rail icon. */
 	wide: boolean;
+	/** Injected `remote.tasks` handle. */
+	tasks: TasksRemote;
+	/** Framework standard kit (scope `root`). */
+	useWorkspaces: SnapshotSelectorHook<WorkspaceListState>;
+	/** Framework-injected translate seat (namespace `scheduled-tasks`). */
+	t: PanelTranslate;
+}
+
+/** Props for the shell.overlay panel entry. */
+export interface TasksOverlayProps {
 	/** Injected `remote.tasks` handle. */
 	tasks: TasksRemote;
 	/** Framework standard kit (scope `root`). */
@@ -1006,10 +1017,42 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 type View = { kind: "list" } | { kind: "form"; task?: TaskView } | { kind: "history"; task: TaskView };
 
 export function TasksFooterAction(props: TasksFooterActionProps) {
-	const { wide, tasks, t } = props;
+	const { wide, t } = props;
+	const open = useSyncExternalStore(panelStore.subscribe, panelStore.getSnapshot);
+
+	return wide ? (
+		<button
+			type="button"
+			className={C.trigger}
+			title={t("title")}
+			aria-haspopup="dialog"
+			aria-expanded={open}
+			onClick={() => panelStore.toggle()}
+		>
+			<IconChecklistOutline14 size={16} />
+			<span className={C.triggerLabel}>{t("title")}</span>
+		</button>
+	) : (
+		<button
+			type="button"
+			className={`${C.trigger} ${C.triggerRail}`}
+			title={t("title")}
+			aria-haspopup="dialog"
+			aria-expanded={open}
+			onClick={() => panelStore.toggle()}
+		>
+			<IconChecklistOutline14 size={16} />
+		</button>
+	);
+}
+
+// ── overlay panel (rendered into shell.overlay) ─────────────────────────────
+
+export function TasksOverlay(props: TasksOverlayProps) {
+	const { tasks, t } = props;
 	const workspaceItems = props.useWorkspaces((state) => state.items);
 	const recentWorkspaceId = props.useWorkspaces((state) => state.recentWorkspaceId);
-	const [open, setOpen] = useState(false);
+	const open = useSyncExternalStore(panelStore.subscribe, panelStore.getSnapshot);
 	// Active filter tab: `undefined` selects the All tab (every project).
 	const [selectedPath, setSelectedPath] = useState<string | undefined>();
 	const [taskList, setTaskList] = useState<TaskView[]>([]);
@@ -1017,17 +1060,12 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 	const [error, setError] = useState("");
 	const [busy, setBusy] = useState(false);
 	const tabsRef = useRef<HTMLDivElement>(null);
-	// Track the sidebar width so the overlay can offset past it when the sidebar is expanded.
-	// When the sidebar is collapsed (rail mode, wide=false), the modal is full-screen.
+	// Track the sidebar width so the panel can offset past it (not cover the sidebar).
 	const [sidebarWidth, setSidebarWidth] = useState(0);
+
 	useEffect(() => {
-		if (!open || !wide) {
-			setSidebarWidth(0);
-			return;
-		}
+		if (!open) return;
 		const update = () => {
-			// The DSH frame is a CSS grid with grid-template-columns: <sidebar>px minmax(0,1fr) <details>px.
-			// Find the frame element by its inline grid-template-columns style and read the first column width.
 			const frames = document.querySelectorAll('[style*="grid-template-columns"]');
 			for (const frame of frames) {
 				if (!(frame instanceof HTMLElement)) continue;
@@ -1040,14 +1078,21 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 			}
 		};
 		update();
-		// Re-read on resize (sidebar drag, window resize, collapse/expand).
 		const observer = new ResizeObserver(update);
 		const frames = document.querySelectorAll('[style*="grid-template-columns"]');
 		for (const frame of frames) {
 			if (frame instanceof HTMLElement) observer.observe(frame);
 		}
 		return () => observer.disconnect();
-	}, [open, wide]);
+	}, [open]);
+
+	// Reset to list view and clear errors when the panel is opened.
+	useEffect(() => {
+		if (open) {
+			setView({ kind: "list" });
+			setError("");
+		}
+	}, [open]);
 
 	// Fallback project used as the create target while the All tab is active.
 	const fallbackPath = useMemo(() => {
@@ -1055,10 +1100,6 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 		return recent?.path ?? workspaceItems[0]?.path;
 	}, [workspaceItems, recentWorkspaceId]);
 
-	// One remote call returns every task; the per-project tabs and counts are
-	// derived client-side so the tab badges stay in sync with a single fetch.
-	// The argument is passed explicitly (even though it is optional) because
-	// the typert client enforces the declared parameter count on the wire.
 	const refresh = useCallback(async () => {
 		const result = await tasks.list(undefined);
 		if (result.ok) setTaskList(result.value);
@@ -1088,31 +1129,27 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 	useEffect(() => {
 		if (selectedPath === undefined) return;
 		const stillListed = workspaceItems.some((item) => item.path === selectedPath);
-		const stillCounted = (counts.get(selectedPath) ?? 0) > 0;
-		if (!stillListed || !stillCounted) setSelectedPath(undefined);
+		if (!stillListed || (counts.get(selectedPath) ?? 0) === 0) setSelectedPath(undefined);
 	}, [workspaceItems, selectedPath, counts]);
 
-	// Refresh on open and every 10 seconds while open (runs settle asynchronously).
+	// Load the task list when the panel opens.
 	useEffect(() => {
-		if (!open) return;
-		void refresh();
-		const timer = setInterval(() => void refresh(), 10_000);
-		return () => clearInterval(timer);
+		if (open) void refresh();
 	}, [open, refresh]);
 
+	// Close on Escape.
 	useEffect(() => {
 		if (!open) return;
-		const onKey = (event: KeyboardEvent) => {
-			if (event.key === "Escape") setOpen(false);
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") panelStore.close();
 		};
-		window.addEventListener("keydown", onKey);
-		return () => window.removeEventListener("keydown", onKey);
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [open]);
 
-	// Vertical wheel over the pill row sweeps it horizontally (non-passive so
-	// the page does not also scroll while the row is being swept).
+	// Horizontal wheel scroll for the tab strip.
 	useEffect(() => {
-		if (!open || view.kind !== "list") return;
+		if (!open) return;
 		const el = tabsRef.current;
 		if (el === null) return;
 		const onWheel = (event: WheelEvent) => {
@@ -1184,197 +1221,165 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 			});
 	};
 
+	if (!open) return null;
+
 	return (
-		<>
-			{wide ? (
-				<button
-					type="button"
-					className={C.trigger}
-					title={t("title")}
-					aria-haspopup="dialog"
-					aria-expanded={open}
-					onClick={() => setOpen((current) => !current)}
-				>
+		<div
+			className={C.overlay}
+			style={{ left: sidebarWidth, ["--dshst-sidebar-w" as string]: `${sidebarWidth}px` }}
+		>
+			<div className={C.card} role="dialog" aria-label={t("title")}>
+				<div className={C.header}>
 					<IconChecklistOutline14 size={16} />
-					<span className={C.triggerLabel}>{t("title")}</span>
-				</button>
-			) : (
-				<button
-					type="button"
-					className={`${C.trigger} ${C.triggerRail}`}
-					title={t("title")}
-					aria-haspopup="dialog"
-					aria-expanded={open}
-					onClick={() => setOpen((current) => !current)}
-				>
-					<IconChecklistOutline14 size={16} />
-				</button>
-			)}
-			{open && (
-				// biome-ignore lint/a11y/noStaticElementInteractions: click-outside-to-close on a modal backdrop is a pointer affordance; the dialog itself is keyboard-closeable via Escape.
-				// biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click only closes; no keyboard semantics apply to the scrim itself.
-				<div
-					className={C.overlay}
-					style={{ left: sidebarWidth, ["--dshst-sidebar-w" as string]: `${sidebarWidth}px` }}
-					onClick={(event) => {
-						if (event.target === event.currentTarget) setOpen(false);
-					}}
-				>
-					<div className={C.card} role="dialog" aria-label={t("title")}>
-						<div className={C.header}>
-							<IconChecklistOutline14 size={16} />
-							<h2 className={C.title}>
-								{t("title")}
-							</h2>
-							<button type="button" className={C.close} onClick={() => setOpen(false)} aria-label={t("close")}>
-								<IconCloseOutline16 size={16} />
+					<h2 className={C.title}>
+						{t("title")}
+					</h2>
+					<button type="button" className={C.close} onClick={() => panelStore.close()} aria-label={t("close")}>
+						<IconCloseOutline16 size={16} />
+					</button>
+				</div>
+				<div className={C.body}>
+					{error !== "" && (
+						<div className={C.error}>
+							{error}
+							<button
+								type="button"
+								className={`${C.btn} ${C.btnDanger}`}
+								style={{ marginLeft: 8 }}
+								onClick={() => setError("")}
+							>
+								{t("dismiss")}
 							</button>
 						</div>
-						<div className={C.body}>
-							{error !== "" && (
-								<div className={C.error}>
-									{error}
-									<button
-										type="button"
-										className={`${C.btn} ${C.btnDanger}`}
-										style={{ marginLeft: 8 }}
-										onClick={() => setError("")}
-									>
-										{t("dismiss")}
-									</button>
-								</div>
-							)}
-							{view.kind === "form" && (
-								<TaskForm
-									tasks={tasks}
-									workspaces={workspaceItems}
-									defaultProjectPath={newTaskPath}
-									initial={view.task}
-									onSaved={() => {
-										setView({ kind: "list" });
-										void refresh();
-									}}
-									onCancel={() => setView({ kind: "list" })}
-									t={t}
-								/>
-							)}
-							{view.kind === "history" && (
-								<RunHistory tasks={tasks} task={view.task} onBack={() => setView({ kind: "list" })} t={t} />
-							)}
-							{view.kind === "list" && (
-								<>
-									<div
-										ref={tabsRef}
-										className={C.tabs}
-										role="tablist"
-										aria-label={t("tabs.label")}
-										onKeyDown={onTablistKeyDown}
-									>
+					)}
+					{view.kind === "form" && (
+						<TaskForm
+							tasks={tasks}
+							workspaces={workspaceItems}
+							defaultProjectPath={newTaskPath}
+							initial={view.task}
+							onSaved={() => {
+								setView({ kind: "list" });
+								void refresh();
+							}}
+							onCancel={() => setView({ kind: "list" })}
+							t={t}
+						/>
+					)}
+					{view.kind === "history" && (
+						<RunHistory tasks={tasks} task={view.task} onBack={() => setView({ kind: "list" })} t={t} />
+					)}
+					{view.kind === "list" && (
+						<>
+							<div
+								ref={tabsRef}
+								className={C.tabs}
+								role="tablist"
+								aria-label={t("tabs.label")}
+								onKeyDown={onTablistKeyDown}
+							>
+								<button
+									type="button"
+									role="tab"
+									aria-selected={selectedPath === undefined}
+									className={selectedPath === undefined ? `${C.tab} ${C.tabActive}` : C.tab}
+									onClick={() => setSelectedPath(undefined)}
+								>
+									{t("tabs.all")}
+									<span className={C.tabCount}>({taskList.length})</span>
+								</button>
+								{workspaceItems.map((item) => {
+									if ((counts.get(item.path) ?? 0) === 0) return null;
+									const active = selectedPath === item.path;
+									return (
 										<button
+											key={item.workspaceId}
 											type="button"
 											role="tab"
-											aria-selected={selectedPath === undefined}
-											className={selectedPath === undefined ? `${C.tab} ${C.tabActive}` : C.tab}
-											onClick={() => setSelectedPath(undefined)}
+											aria-selected={active}
+											className={active ? `${C.tab} ${C.tabActive}` : C.tab}
+											title={item.path}
+											onClick={() => setSelectedPath(item.path)}
 										>
-											{t("tabs.all")}
-											<span className={C.tabCount}>({taskList.length})</span>
+											{item.title}
+											<span className={C.tabCount}>({counts.get(item.path) ?? 0})</span>
 										</button>
-										{workspaceItems.map((item) => {
-											// Only projects that actually own tasks get a tab.
-											if ((counts.get(item.path) ?? 0) === 0) return null;
-											const active = selectedPath === item.path;
-											return (
-												<button
-													key={item.workspaceId}
-													type="button"
-													role="tab"
-													aria-selected={active}
-													className={active ? `${C.tab} ${C.tabActive}` : C.tab}
-													title={item.path}
-													onClick={() => setSelectedPath(item.path)}
-												>
-													{item.title}
-													<span className={C.tabCount}>({counts.get(item.path) ?? 0})</span>
-												</button>
-											);
-										})}
-									</div>
-									<div style={layout.row}>
-										<span className={C.note}>
-											{selectedPath === undefined
-												? t("list.allNote", { count: taskList.length })
-												: t("list.projectNote", { path: selectedPath })}
-										</span>
-										<span style={layout.spacer} />
-										<button
-											type="button"
-											className={`${C.btn} ${C.btnPrimary}`}
-											disabled={newTaskPath === undefined}
-											onClick={() => setView({ kind: "form" })}
-										>
-											+ {t("list.newTask")}
-										</button>
-									</div>
-									{visibleTasks.length === 0 && (
-										<div className={C.empty}>{selectedPath === undefined ? t("list.emptyAll") : t("list.empty")}</div>
-									)}
-									{visibleTasks.map((task) => {
-										const badge = taskBadge(t, task);
-										return (
-											<div key={task.id} className={C.row}>
-												<span className={`${C.badge} ${badge.cls}`}>{badge.text}</span>
-												<div style={{ flex: 1, minWidth: 0 }}>
-													<div className={C.name}>{task.name}</div>
-													<div className={C.meta}>
-														{scheduleText(t, task)}
-														{" · "}
-														{nextRunText(t, task)}
-														{task.model !== undefined &&
-															` · ${t("model.used", { provider: task.model.provider, model: task.model.model })}`}
-														{task.preset !== undefined &&
-															` · ${t("agentPreset.used", { name: task.preset })}`}
-														{task.skills !== undefined && task.skills.length > 0 &&
-															` · ${t("skills.used", { count: task.skills.length })}`}
-														{task.sessionMode === "reuse" &&
-															` · ${t("sessionMode.reuse")}`}
-														{(task.effectiveFrom !== undefined || task.effectiveUntil !== undefined) &&
-															` · ${effectiveRangeText(t, task)}`}
-													</div>
-												</div>
-												<button
-													type="button"
-													className={C.btn}
-													disabled={busy}
-													onClick={() => runNow(task)}
-													title={t("list.runNowTitle")}
-												>
-													{t("list.run")}
-												</button>
-												<button type="button" className={C.btn} onClick={() => setView({ kind: "form", task })}>
-													{t("list.edit")}
-												</button>
-												<button type="button" className={C.btn} onClick={() => setView({ kind: "history", task })}>
-													{t("list.history")}
-												</button>
-												<button type="button" className={C.btn} onClick={() => toggle(task.id, !task.enabled)}>
-													{task.enabled ? t("list.disable") : t("list.enable")}
-												</button>
-												<button type="button" className={`${C.btn} ${C.btnDanger}`} onClick={() => remove(task)}>
-													{t("list.delete")}
-												</button>
-											</div>
 										);
 									})}
-								</>
+							</div>
+							<div style={layout.row}>
+								<span className={C.note}>
+									{selectedPath === undefined
+										? t("list.allNote", { count: taskList.length })
+										: t("list.projectNote", { path: selectedPath })}
+								</span>
+								<span style={layout.spacer} />
+								<button
+									type="button"
+									className={`${C.btn} ${C.btnPrimary}`}
+									disabled={newTaskPath === undefined}
+									onClick={() => setView({ kind: "form" })}
+								>
+									+ {t("list.newTask")}
+								</button>
+							</div>
+							{visibleTasks.length === 0 && (
+								<div className={C.empty}>{selectedPath === undefined ? t("list.emptyAll") : t("list.empty")}</div>
 							)}
-						</div>
-						<div className={C.footer}>
-							<span className={C.note}>{t("footer.note")}</span>
-						</div>
-					</div>
+							{visibleTasks.map((task) => {
+								const badge = taskBadge(t, task);
+								return (
+									<div key={task.id} className={C.row}>
+										<span className={`${C.badge} ${badge.cls}`}>{badge.text}</span>
+										<div style={{ flex: 1, minWidth: 0 }}>
+											<div className={C.name}>{task.name}</div>
+											<div className={C.meta}>
+												{scheduleText(t, task)}
+												{" · "}
+												{nextRunText(t, task)}
+												{task.model !== undefined &&
+													` · ${t("model.used", { provider: task.model.provider, model: task.model.model })}`}
+												{task.preset !== undefined &&
+													` · ${t("agentPreset.used", { name: task.preset })}`}
+												{task.skills !== undefined && task.skills.length > 0 &&
+													` · ${t("skills.used", { count: task.skills.length })}`}
+												{task.sessionMode === "reuse" &&
+													` · ${t("sessionMode.reuse")}`}
+												{(task.effectiveFrom !== undefined || task.effectiveUntil !== undefined) &&
+													` · ${effectiveRangeText(t, task)}`}
+											</div>
+										</div>
+										<button
+											type="button"
+											className={C.btn}
+											disabled={busy}
+											onClick={() => runNow(task)}
+											title={t("list.runNowTitle")}
+										>
+											{t("list.run")}
+										</button>
+										<button type="button" className={C.btn} onClick={() => setView({ kind: "form", task })}>
+											{t("list.edit")}
+										</button>
+										<button type="button" className={C.btn} onClick={() => setView({ kind: "history", task })}>
+											{t("list.history")}
+										</button>
+										<button type="button" className={C.btn} onClick={() => toggle(task.id, !task.enabled)}>
+											{task.enabled ? t("list.disable") : t("list.enable")}
+										</button>
+										<button type="button" className={`${C.btn} ${C.btnDanger}`} onClick={() => remove(task)}>
+											{t("list.delete")}
+										</button>
+									</div>
+								);
+							})}
+						</>
+					)}
 				</div>
-			)}
-		</>
+				<div className={C.footer}>
+					<span className={C.note}>{t("footer.note")}</span>
+				</div>
+			</div>
+		</div>
 	);
 }

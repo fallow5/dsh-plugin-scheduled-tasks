@@ -58,8 +58,8 @@ const css = `
 .dshst-trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}
 .dshst-trigger-rail{border-radius:50%;justify-content:center;gap:0;width:36px;height:36px;margin:8px 0 10px;padding:0;flex:none}
 .dshst-trigger-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.dshst-overlay{position:fixed;top:0;right:0;bottom:0;left:0;z-index:1000;background:var(--dsw-alias-bg-mask-1);backdrop-filter:var(--dsh-mask-blur);display:flex;align-items:center;justify-content:center;transition:left .15s var(--ds-ease-in-out,ease)}
-.dshst-card{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2);width:800px;max-width:calc(100vw - var(--dshst-sidebar-w,0px) - 48px);height:min(800px,100vh - 48px);box-shadow:var(--dsw-shadow-lv3);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:24px;display:flex;flex-direction:column;overflow:hidden}
+.dshst-overlay{position:absolute;top:0;right:0;bottom:0;left:0;z-index:1;display:flex;flex-direction:column;overflow:hidden;transition:left .15s var(--ds-ease-in-out,ease)}
+.dshst-card{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2);flex:1;width:100%;max-width:100%;height:100%;--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);display:flex;flex-direction:column;overflow:hidden}
 .dshst-header{box-sizing:border-box;flex:none;justify-content:space-between;align-items:center;gap:8px;height:54px;padding:20px 14px 8px 10px;display:flex}
 .dshst-title{color:var(--dsw-alias-label-primary);font-size:16px;font-weight:500;line-height:24px;margin:0;flex:1}
 .dshst-body{flex:1;min-height:0;padding:0 24px 24px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
@@ -111,7 +111,6 @@ const css = `
    On narrow screens (phones, small tablets) the 800px card becomes a
    near-full-screen sheet with tighter padding so the form stays usable. */
 @media(max-width:640px){
-.dshst-card{width:100vw!important;max-width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0}
 .dshst-header{padding:12px 12px 6px 8px;height:48px}
 .dshst-body{padding:0 12px 12px;gap:6px}
 .dshst-footer{padding:0 12px 12px}
