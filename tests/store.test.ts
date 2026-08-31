@@ -327,3 +327,103 @@ describe("TasksStore agent preset", () => {
 		expect(updated.preset).toBeUndefined();
 	});
 });
+
+describe("TasksStore skills and sessionMode", () => {
+	it("persists skills on create", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const task = await store.create({
+			projectPath: "/projects/demo",
+			name: "with skills",
+			prompt: "run with skills",
+			kind: "at",
+			at: FUTURE_AT,
+			skills: ["write-sglang-test", "env-var-conventions"],
+		});
+		expect(task.skills).toEqual(["write-sglang-test", "env-var-conventions"]);
+	});
+
+	it("persists sessionMode on create", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const task = await store.create({
+			projectPath: "/projects/demo",
+			name: "reuse session",
+			prompt: "run in a reused session",
+			kind: "at",
+			at: FUTURE_AT,
+			sessionMode: "reuse",
+		});
+		expect(task.sessionMode).toBe("reuse");
+	});
+
+	it("updates skills on update", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const created = await store.create({
+			projectPath: "/projects/demo",
+			name: "skill task",
+			prompt: "run",
+			kind: "at",
+			at: FUTURE_AT,
+			skills: ["skill-a"],
+		});
+		const updated = await store.update(created.id, { skills: ["skill-b", "skill-c"] });
+		expect(updated.skills).toEqual(["skill-b", "skill-c"]);
+	});
+
+	it("clears skills with null on update", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const created = await store.create({
+			projectPath: "/projects/demo",
+			name: "skill task",
+			prompt: "run",
+			kind: "at",
+			at: FUTURE_AT,
+			skills: ["skill-a"],
+		});
+		const updated = await store.update(created.id, { skills: null });
+		expect(updated.skills).toBeUndefined();
+	});
+
+	it("updates sessionMode on update", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const created = await store.create({
+			projectPath: "/projects/demo",
+			name: "session task",
+			prompt: "run",
+			kind: "at",
+			at: FUTURE_AT,
+			sessionMode: "fresh",
+		});
+		const updated = await store.update(created.id, { sessionMode: "reuse" });
+		expect(updated.sessionMode).toBe("reuse");
+	});
+
+	it("clears sessionMode with null on update", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const created = await store.create({
+			projectPath: "/projects/demo",
+			name: "session task",
+			prompt: "run",
+			kind: "at",
+			at: FUTURE_AT,
+			sessionMode: "reuse",
+		});
+		const updated = await store.update(created.id, { sessionMode: null });
+		expect(updated.sessionMode).toBeUndefined();
+	});
+
+	it("setLastSessionId patches the lastSessionId field", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const created = await store.create({
+			projectPath: "/projects/demo",
+			name: "session task",
+			prompt: "run",
+			kind: "at",
+			at: FUTURE_AT,
+			sessionMode: "reuse",
+		});
+		expect(created.lastSessionId).toBeUndefined();
+		await store.setLastSessionId(created.id, "scheduled-run-abc");
+		const task = store.get(created.id);
+		expect(task?.lastSessionId).toBe("scheduled-run-abc");
+	});
+});

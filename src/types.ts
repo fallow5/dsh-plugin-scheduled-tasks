@@ -63,6 +63,10 @@ export const taskSchema = z.object({
 	model: taskModelSchema.optional(),
 	/** Agent preset id for the run; absent means the deployment default preset. */
 	preset: z.string().min(1).max(200).optional(),
+	/** Skill names to pre-load for the run; absent means no skills are pre-loaded. */
+	skills: z.array(z.string().min(1).max(200)).max(100).optional(),
+	/** Session mode: `fresh` creates a new session each run; `reuse` continues the last session. */
+	sessionMode: z.enum(["fresh", "reuse"]).optional(),
 	/** Whether the scheduler may dispatch this task. */
 	enabled: z.boolean(),
 	/** `active` tasks are schedulable; `finished` one-shots no longer run. */
@@ -71,6 +75,8 @@ export const taskSchema = z.object({
 	effectiveFrom: instantSchema.optional(),
 	/** Optional end-of-day UTC instant until which the task is effective; absent means always. */
 	effectiveUntil: instantSchema.optional(),
+	/** Session id of the last run; used to resume when `sessionMode` is `reuse`. */
+	lastSessionId: z.string().optional(),
 	createdAt: instantSchema,
 	updatedAt: instantSchema,
 	lastRunAt: instantSchema.optional(),

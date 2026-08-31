@@ -15,7 +15,7 @@ import type { WorkspaceListState } from "@deepseek-ai/dsh-client-runtime/client"
 import { IconChecklistOutline14, IconCloseOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { SnapshotSelectorHook, TranslateNS } from "@deepseek-ai/dsh-client-ui-slots";
 import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CatalogResult, CreateInput, PresetsResult, RunView, TaskView, UpdateInput } from "../schemas.js";
+import type { CatalogResult, CreateInput, PresetsResult, RunView, SkillsResult, TaskView, UpdateInput } from "../schemas.js";
 import type { RpcResult, TasksRemote } from "./remote.js";
 import { C } from "./styles.js";
 
@@ -364,6 +364,13 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 	const [presetsCatalog, setPresetsCatalog] = useState<PresetsResult | undefined>();
 	const [presetsError, setPresetsError] = useState("");
 	const [presetsBusy, setPresetsBusy] = useState(false);
+	// Skill selection: array of skill names to pre-load.
+	const [selectedSkills, setSelectedSkills] = useState<string[]>(() => initial?.skills ?? []);
+	const [skillsCatalog, setSkillsCatalog] = useState<SkillsResult | undefined>();
+	const [skillsError, setSkillsError] = useState("");
+	const [skillsBusy, setSkillsBusy] = useState(false);
+	// Session mode: "fresh" (default) or "reuse".
+	const [sessionMode, setSessionMode] = useState<"fresh" | "reuse">(() => initial?.sessionMode ?? "fresh");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 
@@ -410,6 +417,27 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 	useEffect(() => {
 		void loadPresets();
 	}, [loadPresets]);
+
+	/** Load the skill catalog when the form mounts. */
+	const loadSkills = useCallback(async () => {
+		setSkillsBusy(true);
+		setSkillsError("");
+		const result = await tasks.skills();
+		if (result.ok) setSkillsCatalog(result.value);
+		else setSkillsError(errorText(result));
+		setSkillsBusy(false);
+	}, [tasks]);
+
+	useEffect(() => {
+		void loadSkills();
+	}, [loadSkills]);
+
+	/** Toggle a skill in the selected set. */
+	const toggleSkill = useCallback((name: string) => {
+		setSelectedSkills((prev) =>
+			prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name],
+		);
+	}, []);
 
 	/** Flat option list; a stored selection missing from the catalog is kept as a fallback. */
 	const modelOptions = useMemo<ModelOption[]>(() => {
@@ -504,6 +532,12 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 		if (presetKey !== "") {
 			input = { ...input, preset: presetKey };
 		}
+		if (selectedSkills.length > 0) {
+			input = { ...input, skills: selectedSkills };
+		}
+		if (sessionMode === "reuse") {
+			input = { ...input, sessionMode: "reuse" };
+		}
 		setBusy(true);
 		setError("");
 		try {
@@ -518,6 +552,8 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 								projectPath: projectPath.trim(),
 								...(modelKey === "" ? { model: null } : {}),
 								...(presetKey === "" ? { preset: null } : {}),
+								...(selectedSkills.length === 0 ? { skills: null } : {}),
+								...(sessionMode === "fresh" ? { sessionMode: null } : {}),
 								...(effectiveFrom === "" ? { effectiveFrom: null } : {}),
 								...(effectiveUntil === "" ? { effectiveUntil: null } : {}),
 							} as unknown as UpdateInput,
@@ -806,6 +842,70 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 						))}
 					</select>
 				)}
+			</div>
+			<div style={layout.field}>
+				<div className={C.label}>{t("form.skills")}</div>
+				{skillsError !== "" && (
+					<div style={layout.row}>
+						<span className={C.error}>{skillsError}</span>
+						<button type="button" className={C.btn} disabled={skillsBusy} onClick={() => void loadSkills()}>
+							{t("form.skillsReload")}
+						</button>
+					</div>
+				)}
+				{skillsError === "" && (skillsCatalog === undefined || skillsCatalog.skills.length === 0) && (
+					<div className={C.meta}>{skillsBusy ? t("form.skillsLoading") : t("form.skillsEmpty")}</div>
+				)}
+				{skillsCatalog !== undefined && skillsCatalog.skills.length > 0 && (
+					<div style={{ ...layout.row, flexWrap: "wrap", gap: 4 }}>
+						{skillsCatalog.skills.map((skill) => (
+							<label
+								key={skill.name}
+								style={{
+									cursor: "pointer",
+									display: "inline-flex",
+									alignItems: "center",
+									gap: 4,
+									padding: "2px 8px",
+									borderRadius: 4,
+									border: `1px solid ${selectedSkills.includes(skill.name) ? "var(--ds-accent)" : "var(--ds-border)"}`,
+									background: selectedSkills.includes(skill.name) ? "var(--ds-accent-bg)" : "transparent",
+									fontSize: "0.85em",
+								}}
+							>
+								<input
+									type="checkbox"
+									checked={selectedSkills.includes(skill.name)}
+									onChange={() => toggleSkill(skill.name)}
+									style={{ margin: 0 }}
+								/>
+								<span title={skill.description}>{skill.name}</span>
+							</label>
+						))}
+					</div>
+				)}
+			</div>
+			<div style={layout.field}>
+				<div className={C.label}>{t("form.sessionMode")}</div>
+				<div style={layout.row}>
+					<label style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}>
+						<input
+							type="radio"
+							checked={sessionMode === "fresh"}
+							onChange={() => setSessionMode("fresh")}
+						/>
+						{t("form.sessionModeFresh")}
+					</label>
+					<label style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 12 }}>
+						<input
+							type="radio"
+							checked={sessionMode === "reuse"}
+							onChange={() => setSessionMode("reuse")}
+						/>
+						{t("form.sessionModeReuse")}
+					</label>
+				</div>
+				<div className={C.meta}>{t("form.sessionModeHint")}</div>
 			</div>
 			<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
 				<input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />{" "}
@@ -1128,6 +1228,10 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 															` · ${t("model.used", { provider: task.model.provider, model: task.model.model })}`}
 														{task.preset !== undefined &&
 															` · ${t("agentPreset.used", { name: task.preset })}`}
+														{task.skills !== undefined && task.skills.length > 0 &&
+															` · ${t("skills.used", { count: task.skills.length })}`}
+														{task.sessionMode === "reuse" &&
+															` · ${t("sessionMode.reuse")}`}
 														{(task.effectiveFrom !== undefined || task.effectiveUntil !== undefined) &&
 															` · ${effectiveRangeText(t, task)}`}
 													</div>

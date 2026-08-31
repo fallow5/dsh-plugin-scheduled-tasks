@@ -122,4 +122,26 @@ describe("buildCreateInput", () => {
 		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z" });
 		if ("input" in built) expect(built.input.preset).toBeUndefined();
 	});
+
+	it("passes through skills selection", () => {
+		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z", skills: ["skill-a", "skill-b"] });
+		if ("input" in built) {
+			expect(built.input.skills).toEqual(["skill-a", "skill-b"]);
+		}
+	});
+
+	it("passes through sessionMode", () => {
+		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z", session_mode: "reuse" });
+		if ("input" in built) {
+			expect(built.input.sessionMode).toBe("reuse");
+		}
+	});
+
+	it("omits skills and sessionMode when absent", () => {
+		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z" });
+		if ("input" in built) {
+			expect(built.input.skills).toBeUndefined();
+			expect(built.input.sessionMode).toBeUndefined();
+		}
+	});
 });

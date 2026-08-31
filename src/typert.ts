@@ -16,6 +16,7 @@ import {
 	deleteResultSchema,
 	presetsResultSchema,
 	runViewSchema,
+	skillsResultSchema,
 	taskViewSchema,
 	updateInputSchema,
 } from "./schemas.js";
@@ -60,6 +61,7 @@ export const TYPERT = {
 					{ name: "history", kind: "method", signature: "(id: string): RunView[]" },
 					{ name: "catalog", kind: "method", signature: "(): Promise<CatalogResult>" },
 					{ name: "presets", kind: "method", signature: "(): Promise<PresetsResult>" },
+					{ name: "skills", kind: "method", signature: "(): Promise<SkillsResult>" },
 				],
 				types: [
 					{ name: "TaskId", declaration: "export type TaskId = string;" },
@@ -72,7 +74,7 @@ export const TYPERT = {
 					{
 						name: "TaskView",
 						declaration:
-							"export interface TaskView { id: string; projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; scheduledAt: string; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; preset?: string; enabled: boolean; state: 'active' | 'finished'; effectiveFrom?: string; effectiveUntil?: string; createdAt: string; updatedAt: string; lastRunAt?: string; lastRunId?: string; }",
+							"export interface TaskView { id: string; projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; scheduledAt: string; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; preset?: string; skills?: string[]; sessionMode?: 'fresh' | 'reuse'; lastSessionId?: string; enabled: boolean; state: 'active' | 'finished'; effectiveFrom?: string; effectiveUntil?: string; createdAt: string; updatedAt: string; lastRunAt?: string; lastRunId?: string; }",
 					},
 					{
 						name: "RunView",
@@ -82,12 +84,12 @@ export const TYPERT = {
 					{
 						name: "CreateInput",
 						declaration:
-							"export interface CreateInput { projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; preset?: string; enabled?: boolean; effectiveFrom?: string; effectiveUntil?: string; }",
+							"export interface CreateInput { projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; preset?: string; skills?: string[]; sessionMode?: 'fresh' | 'reuse'; enabled?: boolean; effectiveFrom?: string; effectiveUntil?: string; }",
 					},
 					{
 						name: "UpdateInput",
 						declaration:
-							"export interface UpdateInput { name?: string; prompt?: string; kind?: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel | null; preset?: string | null; enabled?: boolean; effectiveFrom?: string | null; effectiveUntil?: string | null; }",
+							"export interface UpdateInput { name?: string; prompt?: string; kind?: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel | null; preset?: string | null; skills?: string[] | null; sessionMode?: 'fresh' | 'reuse' | null; enabled?: boolean; effectiveFrom?: string | null; effectiveUntil?: string | null; }",
 					},
 					{
 						name: "CatalogModel",
@@ -109,6 +111,14 @@ export const TYPERT = {
 					{
 						name: "PresetsResult",
 						declaration: "export interface PresetsResult { presets: PresetItem[]; default: string | null; }",
+					},
+					{
+						name: "SkillItem",
+						declaration: "export interface SkillItem { name: string; description: string; }",
+					},
+					{
+						name: "SkillsResult",
+						declaration: "export interface SkillsResult { skills: SkillItem[]; }",
 					},
 				],
 			},
@@ -237,6 +247,15 @@ export const TYPERT = {
 			invocation: direct,
 			parameters: [],
 			result: result("PresetsResult", presetsResultSchema),
+		},
+		{
+			id: `${PKG}#tasks/skills`,
+			service: "tasks",
+			namespace: "tasks",
+			method: "skills",
+			invocation: direct,
+			parameters: [],
+			result: result("SkillsResult", skillsResultSchema),
 		},
 	],
 };

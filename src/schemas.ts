@@ -22,6 +22,9 @@ export const taskViewSchema = z.object({
 	timeZone: z.string().optional(),
 	model: taskModelSchema.optional(),
 	preset: z.string().optional(),
+	skills: z.array(z.string()).optional(),
+	sessionMode: z.enum(["fresh", "reuse"]).optional(),
+	lastSessionId: z.string().optional(),
 	enabled: z.boolean(),
 	state: z.enum(["active", "finished"]),
 	effectiveFrom: z.string().optional(),
@@ -70,6 +73,8 @@ export const createInputSchema = z.object({
 	timeZone: z.string().optional(),
 	model: taskModelSchema.optional(),
 	preset: z.string().optional(),
+	skills: z.array(z.string()).optional(),
+	sessionMode: z.enum(["fresh", "reuse"]).optional(),
 	enabled: z.boolean().optional(),
 	effectiveFrom: z.string().optional(),
 	effectiveUntil: z.string().optional(),
@@ -87,6 +92,8 @@ export const updateInputSchema = z.object({
 	timeZone: z.string().optional(),
 	model: z.union([taskModelSchema, z.null()]).optional(),
 	preset: z.union([z.string(), z.null()]).optional(),
+	skills: z.union([z.array(z.string()), z.null()]).optional(),
+	sessionMode: z.union([z.enum(["fresh", "reuse"]), z.null()]).optional(),
 	enabled: z.boolean().optional(),
 	effectiveFrom: z.union([z.string(), z.null()]).optional(),
 	effectiveUntil: z.union([z.string(), z.null()]).optional(),
@@ -140,6 +147,18 @@ export const presetsResultSchema = z.object({
 	default: z.string().nullable(),
 });
 
+/** One skill advertised in `tasks/skills`. */
+export const skillItemSchema = z.object({
+	name: z.string(),
+	description: z.string(),
+});
+
+/** Wire result of `tasks/skills`: every discovered agent skill. */
+export const skillsResultSchema = z.object({
+	/** Skills in discovery order. */
+	skills: z.array(skillItemSchema),
+});
+
 export type TaskView = z.infer<typeof taskViewSchema>;
 export type RunView = z.infer<typeof runViewSchema>;
 export type CreateInput = z.infer<typeof createInputSchema>;
@@ -148,3 +167,5 @@ export type CatalogResult = z.infer<typeof catalogResultSchema>;
 export type ModelCatalogGroup = z.infer<typeof modelCatalogGroupSchema>;
 export type PresetItem = z.infer<typeof presetItemSchema>;
 export type PresetsResult = z.infer<typeof presetsResultSchema>;
+export type SkillItem = z.infer<typeof skillItemSchema>;
+export type SkillsResult = z.infer<typeof skillsResultSchema>;

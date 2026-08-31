@@ -7,7 +7,7 @@
  * @module @opendsh/dsh-plugin-scheduled-tasks
  */
 import type { Context } from "@deepseek-ai/cordis";
-import type { CatalogResult, ModelCatalogGroup, PresetItem, PresetsResult } from "./schemas.js";
+import type { CatalogResult, ModelCatalogGroup, PresetItem, PresetsResult, SkillItem, SkillsResult } from "./schemas.js";
 
 /**
  * Grouped model catalog over every registered provider route (the same groups
@@ -72,4 +72,28 @@ export async function buildPresetCatalog(ctx: Context): Promise<PresetsResult> {
 	const defaultId =
 		typeof presetsService.defaultId === "string" ? presetsService.defaultId : null;
 	return { presets: items, default: defaultId };
+}
+
+/**
+ * Agent-skill catalog over the deployment's discovered skills (the same roster
+ * the DSH skill picker renders). A discovery failure never fails the request.
+ */
+export async function buildSkillCatalog(ctx: Context): Promise<SkillsResult> {
+	const skillsService = ctx.get("skills");
+	if (skillsService === undefined || typeof skillsService.list !== "function") {
+		return { skills: [] };
+	}
+	const items: SkillItem[] = [];
+	try {
+		const roster = await skillsService.list();
+		for (const skill of roster) {
+			items.push({
+				name: skill.name,
+				description: skill.description ?? "",
+			});
+		}
+	} catch {
+		// A broken discovery never fails the catalog request.
+	}
+	return { skills: items };
 }

@@ -119,6 +119,13 @@ function truncate(text: string, maxLength: number): string {
 	return `${text.slice(0, maxLength - marker.length)}${marker}`;
 }
 
+/** Build the effective prompt, optionally prepending skill pre-load instructions. */
+function buildEffectivePrompt(task: Task): string {
+	if (task.skills === undefined || task.skills.length === 0) return task.prompt;
+	const skillList = task.skills.map((s) => `- ${s}`).join("\n");
+	return `Before proceeding, load and use the following skills by calling the skill tool for each:\n${skillList}\n\n---\n\n${task.prompt}`;
+}
+
 /** Race a promise against a hard deadline, rejecting with a clear message on expiry. */
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
 	if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return promise;
@@ -205,6 +212,10 @@ export class TaskExecutor {
 					error: `scheduled-task run failed: ${error instanceof Error ? error.message : String(error)}`,
 				};
 			}
+			// Persist the session id for reuse mode: the next run will continue it.
+			if (sessionId !== undefined && task.sessionMode === "reuse") {
+				await this.store.setLastSessionId(task.id, sessionId);
+			}
 			return await this.store.finishRun(run, task.id, {
 				...outcome,
 				...(sessionId === undefined ? {} : { sessionId }),
@@ -229,6 +240,17 @@ export class TaskExecutor {
 		if (selection === undefined) {
 			return { status: "failed", error: "no model selection is available for this run." };
 		}
+
+		// Build the effective prompt, optionally prepending skill pre-load instructions.
+		const effectivePrompt = buildEffectivePrompt(task);
+
+		// Session reuse: try to continue an existing session from a prior run.
+		if (task.sessionMode === "reuse" && task.lastSessionId !== undefined) {
+			const reused = await this.driveExistingAgent(task, effectivePrompt, agents);
+			if (reused !== undefined) return reused;
+			// Fall through to creating a fresh session if the existing one is gone.
+		}
+
 		const sessionId = SessionId(`scheduled-run-${randomUUID()}`);
 		const meta: { cwd: string; agentPreset?: string } = { cwd: task.projectPath };
 		let handle: Awaited<ReturnType<AgentRegistry["create"]>> | undefined;
@@ -294,7 +316,7 @@ export class TaskExecutor {
 			);
 			agent.followup(
 				createUserMessage({
-					content: [{ type: "text", text: task.prompt }],
+					content: [{ type: "text", text: effectivePrompt }],
 					source: { kind: "plugin", plugin: "scheduled-tasks" },
 				}),
 			);
@@ -320,6 +342,62 @@ export class TaskExecutor {
 			// workspace conversation list would drop it until the next page
 			// refresh re-baselines from persistence. Keeping it registered matches
 			// how normal web conversations behave.
+		}
+	}
+
+	/** Drive a followup turn on an existing live or resumed session. */
+	private async driveExistingAgent(
+		task: Task,
+		effectivePrompt: string,
+		agents: AgentRegistry,
+	): Promise<{ status: RunStatus; output?: string; error?: string; spawnedSessionId?: string } | undefined> {
+		const ctx = this.ctx;
+		const sessionId = task.lastSessionId!;
+		const timeoutLabel = `${Math.round(this.config.runTimeoutMs / 60_000)} minutes`;
+
+		// Try a live agent first (still in memory from a prior run this process).
+		let agent = agents.get(SessionId(sessionId));
+
+		// If not live, try to resume the persisted session.
+		if (agent === undefined) {
+			try {
+				const handle = await agents.resume({ resumeSessionId: SessionId(sessionId) });
+				agent = handle.agent;
+			} catch {
+				// Session no longer exists in persistence; caller falls back to fresh.
+				return undefined;
+			}
+		}
+
+		const firstSeq = agent.session.seq;
+		try {
+			await withTimeout(
+				agent.whenIdle(),
+				this.config.runTimeoutMs,
+				`run timed out after ${timeoutLabel} waiting for the agent to become idle`,
+			);
+			agent.followup(
+				createUserMessage({
+					content: [{ type: "text", text: effectivePrompt }],
+					source: { kind: "plugin", plugin: "scheduled-tasks" },
+				}),
+			);
+			await withTimeout(agent.whenIdle(), this.config.runTimeoutMs, `run timed out after ${timeoutLabel}`);
+			const summary = summarizeRun(agent.session.events, firstSeq);
+			const status: RunStatus = summary.reason?.kind === "completed" ? "completed" : "failed";
+			const error = describeReason(summary.reason);
+			return {
+				status,
+				...(summary.text === "" ? {} : { output: truncate(summary.text, 20_000) }),
+				...(error === undefined ? {} : { error: truncate(error, 4000) }),
+				spawnedSessionId: sessionId,
+			};
+		} catch (error) {
+			return {
+				status: "failed",
+				error: `run drive failed: ${error instanceof Error ? error.message : String(error)}`,
+				spawnedSessionId: sessionId,
+			};
 		}
 	}
 }

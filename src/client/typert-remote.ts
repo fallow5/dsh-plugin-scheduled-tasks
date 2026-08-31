@@ -14,6 +14,7 @@ import {
 	deleteResultSchema,
 	presetsResultSchema,
 	runViewSchema,
+	skillsResultSchema,
 	taskViewSchema,
 	updateInputSchema,
 } from "../schemas.js";
@@ -162,6 +163,15 @@ export const TYPERT_REMOTE: TypertRemoteContribution = {
 			invocation: direct,
 			parameters: [],
 			result: result("PresetsResult", presetsResultSchema),
+		},
+		{
+			id: `${PKG}#tasks/skills`,
+			service: "tasks",
+			namespace: "tasks",
+			method: "skills",
+			invocation: direct,
+			parameters: [],
+			result: result("SkillsResult", skillsResultSchema),
 		},
 	],
 };
