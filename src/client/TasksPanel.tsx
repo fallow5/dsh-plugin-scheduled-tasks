@@ -35,7 +35,7 @@ export interface TasksFooterActionProps {
 	t: PanelTranslate;
 }
 
-/** Props for the shell.overlay panel entry. */
+/** Props for the conversation slot panel entry. */
 export interface TasksOverlayProps {
 	/** Injected `remote.tasks` handle. */
 	tasks: TasksRemote;
@@ -1071,7 +1071,7 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 	);
 }
 
-// ── overlay panel (rendered into shell.overlay) ─────────────────────────────
+// ── conversation panel (dynamically registered into the conversation slot) ─
 
 export function TasksOverlay(props: TasksOverlayProps) {
 	const { tasks, t } = props;
