@@ -15,7 +15,7 @@ import type { WorkspaceListState } from "@deepseek-ai/dsh-client-runtime/client"
 import { IconChecklistOutline14, IconCloseOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { SnapshotSelectorHook, TranslateNS } from "@deepseek-ai/dsh-client-ui-slots";
 import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { CatalogResult, CreateInput, PresetsResult, RunView, SkillsResult, TaskView, UpdateInput } from "../schemas.js";
+import type { CatalogResult, CreateInput, ExpertsResult, RunView, SkillsResult, TaskView, UpdateInput } from "../schemas.js";
 import type { RpcResult, TasksRemote } from "./remote.js";
 import { panelStore } from "./panelState.js";
 import { C } from "./styles.js";
@@ -370,11 +370,11 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 	const [catalog, setCatalog] = useState<CatalogResult | undefined>();
 	const [catalogError, setCatalogError] = useState("");
 	const [catalogBusy, setCatalogBusy] = useState(false);
-	// Preset selection: "" means "use the deployment default".
-	const [presetKey, setPresetKey] = useState(() => initial?.preset ?? "");
-	const [presetsCatalog, setPresetsCatalog] = useState<PresetsResult | undefined>();
-	const [presetsError, setPresetsError] = useState("");
-	const [presetsBusy, setPresetsBusy] = useState(false);
+	// Expert selection: "" means "no expert".
+	const [expertKey, setExpertKey] = useState(() => initial?.expert ?? "");
+	const [expertsCatalog, setExpertsCatalog] = useState<ExpertsResult | undefined>();
+	const [expertsError, setExpertsError] = useState("");
+	const [expertsBusy, setExpertsBusy] = useState(false);
 	// Skill selection: array of skill names to pre-load.
 	const [selectedSkills, setSelectedSkills] = useState<string[]>(() => initial?.skills ?? []);
 	const [skillsCatalog, setSkillsCatalog] = useState<SkillsResult | undefined>();
@@ -385,8 +385,8 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 	const [slashQuery, setSlashQuery] = useState("");
 	const [slashActiveIndex, setSlashActiveIndex] = useState(0);
 	const promptRef = useRef<HTMLTextAreaElement>(null);
-	// Session mode: "fresh" (default) or "reuse".
-	const [sessionMode, setSessionMode] = useState<"fresh" | "reuse">(() => initial?.sessionMode ?? "fresh");
+	// Reuse kinds: which schedule types reuse the last session.
+	const [reuseKinds, setReuseKinds] = useState<("at" | "every" | "cron")[]>(() => initial?.reuseKinds ?? []);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 
@@ -420,19 +420,19 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 		void loadCatalog();
 	}, [loadCatalog]);
 
-	/** Load the agent-preset catalog when the form mounts. */
-	const loadPresets = useCallback(async () => {
-		setPresetsBusy(true);
-		setPresetsError("");
-		const result = await tasks.presets();
-		if (result.ok) setPresetsCatalog(result.value);
-		else setPresetsError(errorText(result));
-		setPresetsBusy(false);
+	/** Load the expert catalog when the form mounts. */
+	const loadExperts = useCallback(async () => {
+		setExpertsBusy(true);
+		setExpertsError("");
+		const result = await tasks.experts();
+		if (result.ok) setExpertsCatalog(result.value);
+		else setExpertsError(errorText(result));
+		setExpertsBusy(false);
 	}, [tasks]);
 
 	useEffect(() => {
-		void loadPresets();
-	}, [loadPresets]);
+		void loadExperts();
+	}, [loadExperts]);
 
 	/** Load the skill catalog when the form mounts. */
 	const loadSkills = useCallback(async () => {
@@ -621,14 +621,14 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 				input = { ...input, model: { provider: selected.provider, model: selected.model } };
 			}
 		}
-		if (presetKey !== "") {
-			input = { ...input, preset: presetKey };
+		if (expertKey !== "") {
+			input = { ...input, expert: expertKey };
 		}
 		if (selectedSkills.length > 0) {
 			input = { ...input, skills: selectedSkills };
 		}
-		if (sessionMode === "reuse") {
-			input = { ...input, sessionMode: "reuse" };
+		if (reuseKinds.length > 0) {
+			input = { ...input, reuseKinds };
 		}
 		setBusy(true);
 		setError("");
@@ -643,9 +643,9 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 								...input,
 								projectPath: projectPath.trim(),
 								...(modelKey === "" ? { model: null } : {}),
-								...(presetKey === "" ? { preset: null } : {}),
+								...(expertKey === "" ? { expert: null } : {}),
 								...(selectedSkills.length === 0 ? { skills: null } : {}),
-								...(sessionMode === "fresh" ? { sessionMode: null } : {}),
+								...(reuseKinds.length === 0 ? { reuseKinds: null } : {}),
 								...(effectiveFrom === "" ? { effectiveFrom: null } : {}),
 								...(effectiveUntil === "" ? { effectiveUntil: null } : {}),
 							} as unknown as UpdateInput,
@@ -925,31 +925,25 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 				)}
 			</div>
 			<div style={layout.field}>
-				<div className={C.label}>{t("form.agentPreset")}</div>
-				{presetsError !== "" && (
+				<div className={C.label}>{t("form.expert")}</div>
+				{expertsError !== "" && (
 					<div style={layout.row}>
-						<span className={C.error}>{presetsError}</span>
-						<button type="button" className={C.btn} disabled={presetsBusy} onClick={() => void loadPresets()}>
-							{t("form.agentPresetReload")}
+						<span className={C.error}>{expertsError}</span>
+						<button type="button" className={C.btn} disabled={expertsBusy} onClick={() => void loadExperts()}>
+							{t("form.expertReload")}
 						</button>
 					</div>
 				)}
-				{presetsError === "" && (presetsCatalog === undefined || presetsCatalog.presets.length === 0) && (
-					<div className={C.meta}>{presetsBusy ? t("form.agentPresetLoading") : t("form.agentPresetEmpty")}</div>
+				{expertsError === "" && (expertsCatalog === undefined || expertsCatalog.experts.length === 0) && (
+					<div className={C.meta}>{expertsBusy ? t("form.expertLoading") : t("form.expertEmpty")}</div>
 				)}
-				{presetsCatalog !== undefined && presetsCatalog.presets.length > 0 && (
-					<select className={C.select} value={presetKey} onChange={(event) => setPresetKey(event.target.value)}>
-						<option value="">
-							{presetsCatalog.default !== null
-								? t("form.agentPresetDefaultWith", {
-										name: presetsCatalog.presets.find((p) => p.id === presetsCatalog.default)?.name ?? presetsCatalog.default,
-									})
-								: t("form.agentPresetDefault")}
-						</option>
-						{presetsCatalog.presets.map((preset) => (
-							<option key={preset.id} value={preset.id}>
-								{preset.name}
-								{preset.description !== undefined ? ` — ${preset.description}` : ""}
+				{expertsCatalog !== undefined && expertsCatalog.experts.length > 0 && (
+					<select className={C.select} value={expertKey} onChange={(event) => setExpertKey(event.target.value)}>
+						<option value="">{t("form.expertDefault")}</option>
+						{expertsCatalog.experts.map((expert) => (
+							<option key={expert.slug} value={expert.slug}>
+								{expert.name}
+								{expert.division !== "" ? ` [${expert.division}]` : ""}
 							</option>
 						))}
 					</select>
@@ -985,15 +979,46 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 				<div className={C.meta}>{t("form.skillsHint")}</div>
 			</div>
 			<div style={layout.field}>
-				<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
-					<input
-						type="checkbox"
-						checked={sessionMode === "reuse"}
-						onChange={(event) => setSessionMode(event.target.checked ? "reuse" : "fresh")}
-					/>
-					{t("form.sessionModeReuse")}
-				</label>
-				<div className={C.meta}>{t("form.sessionModeHint")}</div>
+				<div className={C.label}>{t("form.reuseKinds")}</div>
+				<div className={C.meta}>{t("form.reuseKindsHint")}</div>
+				<div style={{ ...layout.row, flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+					<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
+						<input
+							type="checkbox"
+							checked={reuseKinds.includes("at")}
+							onChange={(event) =>
+								setReuseKinds((prev) =>
+									event.target.checked ? [...prev, "at"] : prev.filter((k) => k !== "at"),
+								)
+							}
+						/>
+						{t("form.reuseKindAt")}
+					</label>
+					<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
+						<input
+							type="checkbox"
+							checked={reuseKinds.includes("every")}
+							onChange={(event) =>
+								setReuseKinds((prev) =>
+									event.target.checked ? [...prev, "every"] : prev.filter((k) => k !== "every"),
+								)
+							}
+						/>
+						{t("form.reuseKindEvery")}
+					</label>
+					<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
+						<input
+							type="checkbox"
+							checked={reuseKinds.includes("cron")}
+							onChange={(event) =>
+								setReuseKinds((prev) =>
+									event.target.checked ? [...prev, "cron"] : prev.filter((k) => k !== "cron"),
+								)
+							}
+						/>
+						{t("form.reuseKindCron")}
+					</label>
+				</div>
 			</div>
 			<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
 				<input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />{" "}
@@ -1339,12 +1364,12 @@ export function TasksOverlay(props: TasksOverlayProps) {
 												{nextRunText(t, task)}
 												{task.model !== undefined &&
 													` · ${t("model.used", { provider: task.model.provider, model: task.model.model })}`}
-												{task.preset !== undefined &&
-													` · ${t("agentPreset.used", { name: task.preset })}`}
+												{task.expert !== undefined &&
+													` · ${t("expert.used", { name: task.expert })}`}
 												{task.skills !== undefined && task.skills.length > 0 &&
 													` · ${t("skills.used", { count: task.skills.length })}`}
-												{task.sessionMode === "reuse" &&
-													` · ${t("sessionMode.reuse")}`}
+												{task.reuseKinds !== undefined && task.reuseKinds.length > 0 &&
+													` · ${t("reuseKinds.used")}`}
 												{(task.effectiveFrom !== undefined || task.effectiveUntil !== undefined) &&
 													` · ${effectiveRangeText(t, task)}`}
 											</div>

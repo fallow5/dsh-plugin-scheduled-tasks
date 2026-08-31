@@ -5,7 +5,7 @@
  *
  * @module @opendsh/dsh-plugin-scheduled-tasks
  */
-import type { CatalogResult, CreateInput, PresetsResult, RunView, SkillsResult, TaskView, UpdateInput } from "../schemas.js";
+import type { CatalogResult, CreateInput, ExpertsResult, RunView, SkillsResult, TaskView, UpdateInput } from "../schemas.js";
 
 /** One settled wire result. */
 export type RpcResult<T> = { ok: true; value: T } | { ok: false; error: { code: string; message: string } };
@@ -19,6 +19,6 @@ export interface TasksRemote {
 	runNow(id: string): Promise<RpcResult<RunView>>;
 	history(id: string): Promise<RpcResult<RunView[]>>;
 	catalog(): Promise<RpcResult<CatalogResult>>;
-	presets(): Promise<RpcResult<PresetsResult>>;
+	experts(): Promise<RpcResult<ExpertsResult>>;
 	skills(): Promise<RpcResult<SkillsResult>>;
 }

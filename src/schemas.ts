@@ -21,9 +21,9 @@ export const taskViewSchema = z.object({
 	cron: z.string().optional(),
 	timeZone: z.string().optional(),
 	model: taskModelSchema.optional(),
-	preset: z.string().optional(),
+	expert: z.string().optional(),
 	skills: z.array(z.string()).optional(),
-	sessionMode: z.enum(["fresh", "reuse"]).optional(),
+	reuseKinds: z.array(z.enum(["at", "every", "cron"])).optional(),
 	lastSessionId: z.string().optional(),
 	enabled: z.boolean(),
 	state: z.enum(["active", "finished"]),
@@ -72,9 +72,9 @@ export const createInputSchema = z.object({
 	cron: z.string().optional(),
 	timeZone: z.string().optional(),
 	model: taskModelSchema.optional(),
-	preset: z.string().optional(),
+	expert: z.string().optional(),
 	skills: z.array(z.string()).optional(),
-	sessionMode: z.enum(["fresh", "reuse"]).optional(),
+	reuseKinds: z.array(z.enum(["at", "every", "cron"])).optional(),
 	enabled: z.boolean().optional(),
 	effectiveFrom: z.string().optional(),
 	effectiveUntil: z.string().optional(),
@@ -91,9 +91,9 @@ export const updateInputSchema = z.object({
 	cron: z.string().optional(),
 	timeZone: z.string().optional(),
 	model: z.union([taskModelSchema, z.null()]).optional(),
-	preset: z.union([z.string(), z.null()]).optional(),
+	expert: z.union([z.string(), z.null()]).optional(),
 	skills: z.union([z.array(z.string()), z.null()]).optional(),
-	sessionMode: z.union([z.enum(["fresh", "reuse"]), z.null()]).optional(),
+	reuseKinds: z.union([z.array(z.enum(["at", "every", "cron"])), z.null()]).optional(),
 	enabled: z.boolean().optional(),
 	effectiveFrom: z.union([z.string(), z.null()]).optional(),
 	effectiveUntil: z.union([z.string(), z.null()]).optional(),
@@ -132,19 +132,18 @@ export const catalogResultSchema = z.object({
 		.nullable(),
 });
 
-/** One agent preset advertised in `tasks/presets`. */
-export const presetItemSchema = z.object({
-	id: z.string(),
+/** One expert advertised in `tasks/experts`. */
+export const expertItemSchema = z.object({
+	slug: z.string(),
 	name: z.string(),
-	description: z.string().optional(),
+	division: z.string(),
+	description: z.string(),
 });
 
-/** Wire result of `tasks/presets`: every discovered agent preset. */
-export const presetsResultSchema = z.object({
-	/** Presets in discovery order. */
-	presets: z.array(presetItemSchema),
-	/** Current default preset id when the deployment exposes one. */
-	default: z.string().nullable(),
+/** Wire result of `tasks/experts`: every enabled agency expert. */
+export const expertsResultSchema = z.object({
+	/** Experts in discovery order. */
+	experts: z.array(expertItemSchema),
 });
 
 /** One skill advertised in `tasks/skills`. */
@@ -165,7 +164,7 @@ export type CreateInput = z.infer<typeof createInputSchema>;
 export type UpdateInput = z.infer<typeof updateInputSchema>;
 export type CatalogResult = z.infer<typeof catalogResultSchema>;
 export type ModelCatalogGroup = z.infer<typeof modelCatalogGroupSchema>;
-export type PresetItem = z.infer<typeof presetItemSchema>;
-export type PresetsResult = z.infer<typeof presetsResultSchema>;
+export type ExpertItem = z.infer<typeof expertItemSchema>;
+export type ExpertsResult = z.infer<typeof expertsResultSchema>;
 export type SkillItem = z.infer<typeof skillItemSchema>;
 export type SkillsResult = z.infer<typeof skillsResultSchema>;

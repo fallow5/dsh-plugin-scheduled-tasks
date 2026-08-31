@@ -14,7 +14,7 @@ import {
 	catalogResultSchema,
 	createInputSchema,
 	deleteResultSchema,
-	presetsResultSchema,
+	expertsResultSchema,
 	runViewSchema,
 	skillsResultSchema,
 	taskViewSchema,
@@ -60,7 +60,7 @@ export const TYPERT = {
 					{ name: "runNow", kind: "method", signature: "(id: string): Promise<RunView>" },
 					{ name: "history", kind: "method", signature: "(id: string): RunView[]" },
 					{ name: "catalog", kind: "method", signature: "(): Promise<CatalogResult>" },
-					{ name: "presets", kind: "method", signature: "(): Promise<PresetsResult>" },
+					{ name: "experts", kind: "method", signature: "(): Promise<ExpertsResult>" },
 					{ name: "skills", kind: "method", signature: "(): Promise<SkillsResult>" },
 				],
 				types: [
@@ -74,7 +74,7 @@ export const TYPERT = {
 					{
 						name: "TaskView",
 						declaration:
-							"export interface TaskView { id: string; projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; scheduledAt: string; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; preset?: string; skills?: string[]; sessionMode?: 'fresh' | 'reuse'; lastSessionId?: string; enabled: boolean; state: 'active' | 'finished'; effectiveFrom?: string; effectiveUntil?: string; createdAt: string; updatedAt: string; lastRunAt?: string; lastRunId?: string; }",
+							"export interface TaskView { id: string; projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; scheduledAt: string; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; expert?: string; skills?: string[]; reuseKinds?: ('at' | 'every' | 'cron')[]; lastSessionId?: string; enabled: boolean; state: 'active' | 'finished'; effectiveFrom?: string; effectiveUntil?: string; createdAt: string; updatedAt: string; lastRunAt?: string; lastRunId?: string; }",
 					},
 					{
 						name: "RunView",
@@ -84,12 +84,12 @@ export const TYPERT = {
 					{
 						name: "CreateInput",
 						declaration:
-							"export interface CreateInput { projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; preset?: string; skills?: string[]; sessionMode?: 'fresh' | 'reuse'; enabled?: boolean; effectiveFrom?: string; effectiveUntil?: string; }",
+							"export interface CreateInput { projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; expert?: string; skills?: string[]; reuseKinds?: ('at' | 'every' | 'cron')[]; enabled?: boolean; effectiveFrom?: string; effectiveUntil?: string; }",
 					},
 					{
 						name: "UpdateInput",
 						declaration:
-							"export interface UpdateInput { name?: string; prompt?: string; kind?: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel | null; preset?: string | null; skills?: string[] | null; sessionMode?: 'fresh' | 'reuse' | null; enabled?: boolean; effectiveFrom?: string | null; effectiveUntil?: string | null; }",
+							"export interface UpdateInput { name?: string; prompt?: string; kind?: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel | null; expert?: string | null; skills?: string[] | null; reuseKinds?: ('at' | 'every' | 'cron')[] | null; enabled?: boolean; effectiveFrom?: string | null; effectiveUntil?: string | null; }",
 					},
 					{
 						name: "CatalogModel",
@@ -105,12 +105,12 @@ export const TYPERT = {
 							"export interface CatalogResult { groups: ModelCatalogGroup[]; default: { provider: string; model: string } | null; }",
 					},
 					{
-						name: "PresetItem",
-						declaration: "export interface PresetItem { id: string; name: string; description?: string; }",
+						name: "ExpertItem",
+						declaration: "export interface ExpertItem { slug: string; name: string; division: string; description: string; }",
 					},
 					{
-						name: "PresetsResult",
-						declaration: "export interface PresetsResult { presets: PresetItem[]; default: string | null; }",
+						name: "ExpertsResult",
+						declaration: "export interface ExpertsResult { experts: ExpertItem[]; }",
 					},
 					{
 						name: "SkillItem",
@@ -240,13 +240,13 @@ export const TYPERT = {
 			result: result("CatalogResult", catalogResultSchema),
 		},
 		{
-			id: `${PKG}#tasks/presets`,
+			id: `${PKG}#tasks/experts`,
 			service: "tasks",
 			namespace: "tasks",
-			method: "presets",
+			method: "experts",
 			invocation: direct,
 			parameters: [],
-			result: result("PresetsResult", presetsResultSchema),
+			result: result("ExpertsResult", expertsResultSchema),
 		},
 		{
 			id: `${PKG}#tasks/skills`,

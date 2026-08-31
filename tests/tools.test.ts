@@ -111,16 +111,16 @@ describe("buildCreateInput", () => {
 		}
 	});
 
-	it("passes through a preset selection", () => {
-		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z", preset: "standard" });
+	it("passes through an expert selection", () => {
+		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z", expert: "engineering-frontend-developer" });
 		if ("input" in built) {
-			expect(built.input.preset).toBe("standard");
+			expect(built.input.expert).toBe("engineering-frontend-developer");
 		}
 	});
 
-	it("omits preset when the argument is absent", () => {
+	it("omits expert when the argument is absent", () => {
 		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z" });
-		if ("input" in built) expect(built.input.preset).toBeUndefined();
+		if ("input" in built) expect(built.input.expert).toBeUndefined();
 	});
 
 	it("passes through skills selection", () => {
@@ -130,18 +130,18 @@ describe("buildCreateInput", () => {
 		}
 	});
 
-	it("passes through sessionMode", () => {
-		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z", session_mode: "reuse" });
+	it("passes through reuseKinds", () => {
+		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z", reuse_kinds: ["cron", "every"] });
 		if ("input" in built) {
-			expect(built.input.sessionMode).toBe("reuse");
+			expect(built.input.reuseKinds).toEqual(["cron", "every"]);
 		}
 	});
 
-	it("omits skills and sessionMode when absent", () => {
+	it("omits skills and reuseKinds when absent", () => {
 		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z" });
 		if ("input" in built) {
 			expect(built.input.skills).toBeUndefined();
-			expect(built.input.sessionMode).toBeUndefined();
+			expect(built.input.reuseKinds).toBeUndefined();
 		}
 	});
 });

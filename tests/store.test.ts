@@ -273,62 +273,62 @@ describe("TasksStore effective date range", () => {
 	});
 });
 
-describe("TasksStore agent preset", () => {
-	it("persists a preset on create", async () => {
+describe("TasksStore expert", () => {
+	it("persists an expert on create", async () => {
 		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
 		const task = await store.create({
 			projectPath: "/projects/demo",
-			name: "with preset",
-			prompt: "run with a preset",
+			name: "with expert",
+			prompt: "run with an expert",
 			kind: "at",
 			at: FUTURE_AT,
-			preset: "standard",
+			expert: "engineering-frontend-developer",
 		});
-		expect(task.preset).toBe("standard");
+		expect(task.expert).toBe("engineering-frontend-developer");
 	});
 
-	it("keeps preset absent when create omits it", async () => {
+	it("keeps expert absent when create omits it", async () => {
 		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
 		const task = await store.create({
 			projectPath: "/projects/demo",
-			name: "no preset",
-			prompt: "run without a preset",
+			name: "no expert",
+			prompt: "run without an expert",
 			kind: "at",
 			at: FUTURE_AT,
 		});
-		expect(task.preset).toBeUndefined();
+		expect(task.expert).toBeUndefined();
 	});
 
-	it("updates preset on update", async () => {
+	it("updates expert on update", async () => {
 		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
 		const created = await store.create({
 			projectPath: "/projects/demo",
-			name: "preset task",
-			prompt: "run with a preset",
+			name: "expert task",
+			prompt: "run with an expert",
 			kind: "at",
 			at: FUTURE_AT,
-			preset: "standard",
+			expert: "engineering-frontend-developer",
 		});
-		const updated = await store.update(created.id, { preset: "code" });
-		expect(updated.preset).toBe("code");
+		const updated = await store.update(created.id, { expert: "security-security-reviewer" });
+		expect(updated.expert).toBe("security-security-reviewer");
 	});
 
-	it("clears preset with null on update", async () => {
+	it("clears expert with null on update", async () => {
 		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
 		const created = await store.create({
 			projectPath: "/projects/demo",
-			name: "preset task",
-			prompt: "run with a preset",
+			name: "expert task",
+			prompt: "run with an expert",
 			kind: "at",
 			at: FUTURE_AT,
-			preset: "standard",
+			expert: "engineering-frontend-developer",
 		});
-		const updated = await store.update(created.id, { preset: null });
-		expect(updated.preset).toBeUndefined();
+		const updated = await store.update(created.id, { expert: null });
+		expect(updated.expert).toBeUndefined();
 	});
 });
 
-describe("TasksStore skills and sessionMode", () => {
+describe("TasksStore skills and reuseKinds", () => {
 	it("persists skills on create", async () => {
 		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
 		const task = await store.create({
@@ -342,17 +342,18 @@ describe("TasksStore skills and sessionMode", () => {
 		expect(task.skills).toEqual(["write-sglang-test", "env-var-conventions"]);
 	});
 
-	it("persists sessionMode on create", async () => {
+	it("persists reuseKinds on create", async () => {
 		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
 		const task = await store.create({
 			projectPath: "/projects/demo",
 			name: "reuse session",
 			prompt: "run in a reused session",
-			kind: "at",
-			at: FUTURE_AT,
-			sessionMode: "reuse",
+			kind: "cron",
+			cron: "0 9 * * *",
+			timeZone: "UTC",
+			reuseKinds: ["cron"],
 		});
-		expect(task.sessionMode).toBe("reuse");
+		expect(task.reuseKinds).toEqual(["cron"]);
 	});
 
 	it("updates skills on update", async () => {
@@ -383,32 +384,32 @@ describe("TasksStore skills and sessionMode", () => {
 		expect(updated.skills).toBeUndefined();
 	});
 
-	it("updates sessionMode on update", async () => {
+	it("updates reuseKinds on update", async () => {
 		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
 		const created = await store.create({
 			projectPath: "/projects/demo",
-			name: "session task",
+			name: "reuse task",
 			prompt: "run",
 			kind: "at",
 			at: FUTURE_AT,
-			sessionMode: "fresh",
+			reuseKinds: ["at"],
 		});
-		const updated = await store.update(created.id, { sessionMode: "reuse" });
-		expect(updated.sessionMode).toBe("reuse");
+		const updated = await store.update(created.id, { reuseKinds: ["cron", "every"] });
+		expect(updated.reuseKinds).toEqual(["cron", "every"]);
 	});
 
-	it("clears sessionMode with null on update", async () => {
+	it("clears reuseKinds with null on update", async () => {
 		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
 		const created = await store.create({
 			projectPath: "/projects/demo",
-			name: "session task",
+			name: "reuse task",
 			prompt: "run",
 			kind: "at",
 			at: FUTURE_AT,
-			sessionMode: "reuse",
+			reuseKinds: ["at"],
 		});
-		const updated = await store.update(created.id, { sessionMode: null });
-		expect(updated.sessionMode).toBeUndefined();
+		const updated = await store.update(created.id, { reuseKinds: null });
+		expect(updated.reuseKinds).toBeUndefined();
 	});
 
 	it("setLastSessionId patches the lastSessionId field", async () => {
@@ -419,7 +420,7 @@ describe("TasksStore skills and sessionMode", () => {
 			prompt: "run",
 			kind: "at",
 			at: FUTURE_AT,
-			sessionMode: "reuse",
+			reuseKinds: ["at"],
 		});
 		expect(created.lastSessionId).toBeUndefined();
 		await store.setLastSessionId(created.id, "scheduled-run-abc");

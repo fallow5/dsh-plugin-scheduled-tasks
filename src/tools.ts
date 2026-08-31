@@ -99,11 +99,11 @@ const TASK_VIEW_SCHEMA = {
 		},
 		enabled: { type: "boolean", required: true },
 		state: { type: "string", required: true },
-		preset: { type: "string" },
+		expert: { type: "string" },
 		effectiveFrom: { type: "string" },
 		effectiveUntil: { type: "string" },
 		skills: { type: "array", items: { type: "string" } },
-		sessionMode: { type: "string" },
+		reuseKinds: { type: "array", items: { type: "string", enum: ["at", "every", "cron"] } },
 		lastSessionId: { type: "string" },
 		createdAt: { type: "string", required: true },
 		updatedAt: { type: "string", required: true },
@@ -168,9 +168,9 @@ export function buildCreateInput(args: {
 	enabled?: unknown;
 	effective_from?: unknown;
 	effective_until?: unknown;
-	preset?: unknown;
+	expert?: unknown;
 	skills?: unknown;
-	session_mode?: unknown;
+	reuse_kinds?: unknown;
 }): { input: TaskCreateInput } | { error: ToolError } {
 	if (typeof args.prompt !== "string" || args.prompt.trim().length === 0) {
 		return { error: { code: "invalid_prompt", message: "prompt must be a non-empty string." } };
@@ -248,14 +248,18 @@ export function buildCreateInput(args: {
 			...(args.effective_until === undefined || typeof args.effective_until !== "string"
 				? {}
 				: { effectiveUntil: args.effective_until }),
-			...(args.preset === undefined || typeof args.preset !== "string"
+			...(args.expert === undefined || typeof args.expert !== "string"
 				? {}
-				: { preset: args.preset.trim() }),
+				: { expert: args.expert.trim() }),
 			...(Array.isArray(args.skills)
 				? { skills: args.skills.filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((s) => s.trim()) }
 				: {}),
-			...(args.session_mode === "reuse" || args.session_mode === "fresh"
-				? { sessionMode: args.session_mode }
+			...(Array.isArray(args.reuse_kinds)
+				? {
+						reuseKinds: args.reuse_kinds.filter(
+							(k): k is "at" | "every" | "cron" => k === "at" || k === "every" || k === "cron",
+						),
+					}
 				: {}),
 		},
 	};
@@ -317,19 +321,19 @@ export function registerTaskTools(store: TasksStore, scheduler: TaskScheduler, a
 							type: "string",
 							description: "Optional ISO date until which the task is effective (e.g. 2026-12-31). Leave absent for always.",
 						},
-						preset: {
+						expert: {
 							type: "string",
-							description: "Optional agent preset id for the run (e.g. 'standard', 'code', 'minimal'). Leave absent for the deployment default.",
+							description: "Optional expert slug from dsh-agency-agents to summon for the run. The agent will use the summon_expert tool to summon this expert.",
 						},
 						skills: {
 							type: "array",
 							items: { type: "string" },
 							description: "Optional skill names to pre-load for the run. The agent will load each skill before executing the prompt.",
 						},
-						session_mode: {
-							type: "string",
-							enum: ["fresh", "reuse"],
-							description: "Session mode: 'fresh' creates a new session each run (default); 'reuse' continues the last session for periodic tasks.",
+						reuse_kinds: {
+							type: "array",
+							items: { type: "string", enum: ["at", "every", "cron"] },
+							description: "Schedule kinds that reuse the last session instead of creating a new one each run (e.g. ['cron', 'every'] for periodic tasks).",
 						},
 					},
 					output: {

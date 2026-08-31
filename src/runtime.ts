@@ -9,9 +9,9 @@
 
 import type { Context } from "@deepseek-ai/cordis";
 import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
-import { buildModelCatalog, buildPresetCatalog, buildSkillCatalog } from "./catalog.js";
+import { buildExpertCatalog, buildModelCatalog, buildSkillCatalog } from "./catalog.js";
 import type { TaskScheduler } from "./scheduler.js";
-import type { CatalogResult, CreateInput, PresetsResult, RunView, SkillsResult, TaskView, UpdateInput } from "./schemas.js";
+import type { CatalogResult, CreateInput, ExpertsResult, RunView, SkillsResult, TaskView, UpdateInput } from "./schemas.js";
 import { TaskNotFoundError, TasksInputError, type TasksStore } from "./store.js";
 import type { RunRecord, Task } from "./types.js";
 
@@ -61,13 +61,11 @@ export class TasksRuntime extends TypertRemoteService {
 	}
 
 	/**
-	 * Agent-preset catalog over the deployment's discovered presets (the same
-	 * roster the DSH preset picker renders), plus the deployment's current
-	 * default preset id when one is exposed.
+	 * Expert catalog over the deployment's enabled agency-agents experts.
 	 */
 	@Remote
-	async presets(): Promise<PresetsResult> {
-		return buildPresetCatalog(this.ctx);
+	async experts(): Promise<ExpertsResult> {
+		return buildExpertCatalog(this.ctx);
 	}
 
 	/**

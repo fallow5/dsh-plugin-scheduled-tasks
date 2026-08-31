@@ -60,12 +60,12 @@ export interface TaskCreateInput {
 	timeZone?: string;
 	/** Explicit provider/model override for runs; absent means the deployment default. */
 	model?: TaskModel;
-	/** Agent preset id for the run; absent means the deployment default preset. */
-	preset?: string;
+	/** Expert slug from dsh-agency-agents; absent means no expert is summoned. */
+	expert?: string;
 	/** Skill names to pre-load for the run; absent means no skills are pre-loaded. */
 	skills?: string[];
-	/** Session mode: `fresh` creates a new session each run; `reuse` continues the last session. */
-	sessionMode?: "fresh" | "reuse";
+	/** Schedule kinds that reuse the last session instead of creating a new one each run. */
+	reuseKinds?: ("at" | "every" | "cron")[];
 	enabled?: boolean;
 	/** Optional start-of-day UTC instant from which the task is effective. */
 	effectiveFrom?: string;
@@ -88,12 +88,12 @@ export interface TaskUpdateInput {
 	timeZone?: string;
 	/** Set to replace the override, or `null` to clear it back to the default. */
 	model?: TaskModel | null;
-	/** Set to replace, or `null` to clear back to the default preset. */
-	preset?: string | null;
+	/** Set to replace, or `null` to clear back to no expert. */
+	expert?: string | null;
 	/** Set to replace, or `null`/empty to clear the skill selection. */
 	skills?: string[] | null;
-	/** Set to replace, or `null` to clear back to the default session mode. */
-	sessionMode?: "fresh" | "reuse" | null;
+	/** Set to replace, or `null`/empty to clear back to always-fresh. */
+	reuseKinds?: ("at" | "every" | "cron")[] | null;
 	enabled?: boolean;
 	/** Set to replace, or `null` to clear back to always-effective. */
 	effectiveFrom?: string | null;
@@ -240,11 +240,13 @@ export class TasksStore {
 			...(target.cron === undefined ? {} : { cron: target.cron }),
 			...(target.timeZone === undefined ? {} : { timeZone: target.timeZone }),
 			...(input.model === undefined ? {} : { model: normalizeModel(input.model) }),
-			...(input.preset === undefined ? {} : { preset: input.preset.trim() }),
+			...(input.expert === undefined ? {} : { expert: input.expert.trim() }),
 			...(input.skills === undefined || input.skills.length === 0
 				? {}
 				: { skills: input.skills.map((s) => s.trim()).filter((s) => s.length > 0) }),
-			...(input.sessionMode === undefined ? {} : { sessionMode: input.sessionMode }),
+			...(input.reuseKinds === undefined || input.reuseKinds.length === 0
+				? {}
+				: { reuseKinds: input.reuseKinds }),
 			enabled: input.enabled ?? true,
 			state: "active",
 			...(effectiveFrom === undefined ? {} : { effectiveFrom }),
@@ -271,17 +273,17 @@ export class TasksStore {
 			if (patch.model === null) delete next.model;
 			else next.model = normalizeModel(patch.model);
 		}
-		if (patch.preset !== undefined) {
-			if (patch.preset === null) delete next.preset;
-			else next.preset = patch.preset.trim();
+		if (patch.expert !== undefined) {
+			if (patch.expert === null) delete next.expert;
+			else next.expert = patch.expert.trim();
 		}
 		if (patch.skills !== undefined) {
 			if (patch.skills === null || patch.skills.length === 0) delete next.skills;
 			else next.skills = patch.skills.map((s) => s.trim()).filter((s) => s.length > 0);
 		}
-		if (patch.sessionMode !== undefined) {
-			if (patch.sessionMode === null) delete next.sessionMode;
-			else next.sessionMode = patch.sessionMode;
+		if (patch.reuseKinds !== undefined) {
+			if (patch.reuseKinds === null || patch.reuseKinds.length === 0) delete next.reuseKinds;
+			else next.reuseKinds = patch.reuseKinds;
 		}
 		if (patch.effectiveFrom !== undefined) {
 			if (patch.effectiveFrom === null) delete next.effectiveFrom;
@@ -293,7 +295,7 @@ export class TasksStore {
 		}
 		validateEffectiveRange(next.effectiveFrom, next.effectiveUntil);
 		if (patch.kind !== undefined) {
-			const { effectiveFrom: _ef, effectiveUntil: _eu, preset: _p, skills: _s, sessionMode: _sm, ...patchRest } = patch;
+			const { effectiveFrom: _ef, effectiveUntil: _eu, expert: _p, skills: _s, reuseKinds: _sm, ...patchRest } = patch;
 			const target = resolveTaskTarget(
 				{
 					...existing,

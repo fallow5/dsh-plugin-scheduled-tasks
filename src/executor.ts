@@ -119,11 +119,17 @@ function truncate(text: string, maxLength: number): string {
 	return `${text.slice(0, maxLength - marker.length)}${marker}`;
 }
 
-/** Build the effective prompt, optionally prepending skill pre-load instructions. */
+/** Build the effective prompt, optionally prepending skill pre-load and expert summon instructions. */
 function buildEffectivePrompt(task: Task): string {
-	if (task.skills === undefined || task.skills.length === 0) return task.prompt;
-	const skillList = task.skills.map((s) => `- ${s}`).join("\n");
-	return `Before proceeding, load and use the following skills by calling the skill tool for each:\n${skillList}\n\n---\n\n${task.prompt}`;
+	let prefix = "";
+	if (task.skills !== undefined && task.skills.length > 0) {
+		const skillList = task.skills.map((s) => `- ${s}`).join("\n");
+		prefix += `Before proceeding, load and use the following skills by calling the skill tool for each:\n${skillList}\n\n---\n\n`;
+	}
+	if (task.expert !== undefined && task.expert.trim() !== "") {
+		prefix += `Use the summon_expert tool to summon the expert "${task.expert}" for this task.\n\n---\n\n`;
+	}
+	return prefix === "" ? task.prompt : `${prefix}${task.prompt}`;
 }
 
 /** Race a promise against a hard deadline, rejecting with a clear message on expiry. */
@@ -213,7 +219,7 @@ export class TaskExecutor {
 				};
 			}
 			// Persist the session id for reuse mode: the next run will continue it.
-			if (sessionId !== undefined && task.sessionMode === "reuse") {
+			if (sessionId !== undefined && task.reuseKinds !== undefined && task.reuseKinds.includes(task.kind)) {
 				await this.store.setLastSessionId(task.id, sessionId);
 			}
 			return await this.store.finishRun(run, task.id, {
@@ -245,7 +251,7 @@ export class TaskExecutor {
 		const effectivePrompt = buildEffectivePrompt(task);
 
 		// Session reuse: try to continue an existing session from a prior run.
-		if (task.sessionMode === "reuse" && task.lastSessionId !== undefined) {
+		if (task.reuseKinds !== undefined && task.reuseKinds.includes(task.kind) && task.lastSessionId !== undefined) {
 			const reused = await this.driveExistingAgent(task, effectivePrompt, agents);
 			if (reused !== undefined) return reused;
 			// Fall through to creating a fresh session if the existing one is gone.
@@ -264,7 +270,7 @@ export class TaskExecutor {
 			const presets = ctx.get("agentPresets");
 			let setup: Parameters<NonNullable<typeof agents>["create"]>[0]["setup"];
 			if (presets !== undefined && typeof presets.resolve === "function" && typeof presets.mount === "function") {
-				const preset = await presets.resolve(task.preset);
+				const preset = await presets.resolve(undefined);
 				meta.agentPreset = preset.id;
 				setup = async (agentCtx) => {
 					installModelSelection(agentCtx, {

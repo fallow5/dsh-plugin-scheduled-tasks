@@ -7,7 +7,7 @@
  * @module @opendsh/dsh-plugin-scheduled-tasks
  */
 import type { Context } from "@deepseek-ai/cordis";
-import type { CatalogResult, ModelCatalogGroup, PresetItem, PresetsResult, SkillItem, SkillsResult } from "./schemas.js";
+import type { CatalogResult, ExpertItem, ExpertsResult, ModelCatalogGroup, SkillItem, SkillsResult } from "./schemas.js";
 
 /**
  * Grouped model catalog over every registered provider route (the same groups
@@ -44,34 +44,90 @@ export async function buildModelCatalog(ctx: Context): Promise<CatalogResult> {
 	};
 }
 
+/** All standard Agency divisions (mirrors the agency-agents DEFAULT_DIVISIONS). */
+const AGENCY_DIVISIONS = [
+	"academic",
+	"design",
+	"engineering",
+	"finance",
+	"game-development",
+	"gis",
+	"healthcare",
+	"marketing",
+	"paid-media",
+	"product",
+	"project-management",
+	"sales",
+	"security",
+	"spatial-computing",
+	"specialized",
+	"support",
+	"testing",
+] as const;
+
 /**
- * Agent-preset catalog over the deployment's discovered presets (the same roster
- * the DSH preset picker renders), plus the deployment's current default preset
- * id when one is exposed. Broken presets are reported with their id only (the
- * picker shows the id as a fallback name); a discovery failure never fails the
- * request.
+ * Expert catalog over the deployment's enabled agency-agents experts. Reads
+ * the `agencyAgents` service's `getEnabled()` to find which expert slugs are
+ * enabled, then dynamically imports `loadCatalog` from
+ * `@michengai/dsh-agency-agents` to map slugs to names/divisions. When the
+ * plugin is not installed or the catalog fails to load, the request degrades
+ * to returning just the enabled slugs (with the slug as the display name).
  */
-export async function buildPresetCatalog(ctx: Context): Promise<PresetsResult> {
-	const presetsService = ctx.get("agentPresets");
-	if (presetsService === undefined || typeof presetsService.list !== "function") {
-		return { presets: [], default: null };
+export async function buildExpertCatalog(ctx: Context): Promise<ExpertsResult> {
+	const agencyAgents = (ctx as unknown as { get?: (key: string) => unknown }).get?.("agencyAgents");
+	if (agencyAgents === undefined || typeof (agencyAgents as { getEnabled?: unknown }).getEnabled !== "function") {
+		return { experts: [] };
 	}
-	const items: PresetItem[] = [];
+	const items: ExpertItem[] = [];
 	try {
-		const roster = await presetsService.list();
-		for (const preset of roster) {
-			items.push({
-				id: preset.id,
-				name: preset.name ?? preset.id,
-				...(preset.description === undefined ? {} : { description: preset.description }),
-			});
+		const state = (agencyAgents as { getEnabled(): { enabled: string[]; revision: number } }).getEnabled();
+		// Try to load the full roster from the agency-agents package for rich
+		// display (name, division, description). Fall back to slug-only when the
+		// package is not installed or the catalog cannot be loaded.
+		let roster: Map<string, { slug: string; name: string; division: string; description: string }> | undefined;
+		try {
+			// Dynamic import via a variable so the bundler/typechecker does not try
+			// to resolve the optional peer dependency at build time.
+			const specifier = "@michengai/dsh-agency-agents";
+			const mod = (await import(/* @vite-ignore */ specifier)) as {
+				loadCatalog?: (root: string, divisions: readonly string[]) => Promise<
+					Map<string, { slug: string; name: string; nameEn: string; division: string; description: string; descriptionEn: string; persona: string }>
+				>;
+				resolveCatalogRoot?: (root: string) => string;
+			};
+			if (typeof mod.loadCatalog === "function" && typeof mod.resolveCatalogRoot === "function") {
+				const root = mod.resolveCatalogRoot("");
+				const catalog = await mod.loadCatalog(root, AGENCY_DIVISIONS);
+				roster = new Map();
+				for (const [slug, expert] of catalog) {
+					roster.set(slug, { slug, name: expert.name, division: expert.division, description: expert.description });
+				}
+			}
+		} catch {
+			// Package not installed or catalog load failed — degrade to slug-only.
+		}
+		if (roster !== undefined) {
+			for (const slug of state.enabled) {
+				const expert = roster.get(slug);
+				if (expert === undefined) continue;
+				items.push({
+					slug: expert.slug,
+					name: expert.name,
+					division: expert.division,
+					description: expert.description,
+				});
+			}
+			items.sort((a, b) => a.division.localeCompare(b.division) || a.slug.localeCompare(b.slug));
+		} else {
+			// Fallback: return enabled slugs with the slug as the display name.
+			for (const slug of state.enabled) {
+				items.push({ slug, name: slug, division: "", description: "" });
+			}
 		}
 	} catch {
 		// A broken discovery never fails the catalog request.
 	}
-	const defaultId =
-		typeof presetsService.defaultId === "string" ? presetsService.defaultId : null;
-	return { presets: items, default: defaultId };
+	return { experts: items };
 }
 
 /**
