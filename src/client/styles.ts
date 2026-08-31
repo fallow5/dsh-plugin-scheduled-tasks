@@ -121,7 +121,6 @@ const css = `
 .dshst-tab{padding:9px 12px 9px 8px}
 .dshst-input,.dshst-select,.dshst-textarea{font-size:16px;line-height:24px}
 .dshst-textarea{min-height:72px}
-.dshst-overlay{left:0!important}
 }
 /* ── coexistence override ───────────────────────────────────────────────
    The @lemoncat7/dsh-knowledge plugin registers its trigger in the same

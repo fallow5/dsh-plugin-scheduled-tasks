@@ -1017,10 +1017,14 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 	const [error, setError] = useState("");
 	const [busy, setBusy] = useState(false);
 	const tabsRef = useRef<HTMLDivElement>(null);
-	// Track the sidebar width so the overlay can offset past it (not cover the sidebar).
+	// Track the sidebar width so the overlay can offset past it when the sidebar is expanded.
+	// When the sidebar is collapsed (rail mode, wide=false), the modal is full-screen.
 	const [sidebarWidth, setSidebarWidth] = useState(0);
 	useEffect(() => {
-		if (!open) return;
+		if (!open || !wide) {
+			setSidebarWidth(0);
+			return;
+		}
 		const update = () => {
 			// The DSH frame is a CSS grid with grid-template-columns: <sidebar>px minmax(0,1fr) <details>px.
 			// Find the frame element by its inline grid-template-columns style and read the first column width.
@@ -1043,7 +1047,7 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 			if (frame instanceof HTMLElement) observer.observe(frame);
 		}
 		return () => observer.disconnect();
-	}, [open]);
+	}, [open, wide]);
 
 	// Fallback project used as the create target while the All tab is active.
 	const fallbackPath = useMemo(() => {
