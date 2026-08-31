@@ -58,8 +58,8 @@ const css = `
 .dshst-trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}
 .dshst-trigger-rail{border-radius:50%;justify-content:center;gap:0;width:36px;height:36px;margin:8px 0 10px;padding:0;flex:none}
 .dshst-trigger-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.dshst-overlay{position:fixed;inset:0;z-index:1000;background:var(--dsw-alias-bg-mask-1);backdrop-filter:var(--dsh-mask-blur);display:flex;align-items:center;justify-content:center}
-.dshst-card{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2);width:800px;max-width:calc(100vw - 48px);height:min(800px,100vh - 48px);box-shadow:var(--dsw-shadow-lv3);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:24px;display:flex;flex-direction:column;overflow:hidden}
+.dshst-overlay{position:fixed;top:0;right:0;bottom:0;left:0;z-index:1000;background:var(--dsw-alias-bg-mask-1);backdrop-filter:var(--dsh-mask-blur);display:flex;align-items:center;justify-content:center;transition:left .15s var(--ds-ease-in-out,ease)}
+.dshst-card{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2);width:800px;max-width:calc(100vw - var(--dshst-sidebar-w,0px) - 48px);height:min(800px,100vh - 48px);box-shadow:var(--dsw-shadow-lv3);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:24px;display:flex;flex-direction:column;overflow:hidden}
 .dshst-header{box-sizing:border-box;flex:none;justify-content:space-between;align-items:center;gap:8px;height:54px;padding:20px 14px 8px 10px;display:flex}
 .dshst-title{color:var(--dsw-alias-label-primary);font-size:16px;font-weight:500;line-height:24px;margin:0;flex:1}
 .dshst-body{flex:1;min-height:0;padding:0 24px 24px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
@@ -121,6 +121,7 @@ const css = `
 .dshst-tab{padding:9px 12px 9px 8px}
 .dshst-input,.dshst-select,.dshst-textarea{font-size:16px;line-height:24px}
 .dshst-textarea{min-height:72px}
+.dshst-overlay{left:0!important}
 }
 /* ── coexistence override ───────────────────────────────────────────────
    The @lemoncat7/dsh-knowledge plugin registers its trigger in the same

@@ -1017,6 +1017,33 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 	const [error, setError] = useState("");
 	const [busy, setBusy] = useState(false);
 	const tabsRef = useRef<HTMLDivElement>(null);
+	// Track the sidebar width so the overlay can offset past it (not cover the sidebar).
+	const [sidebarWidth, setSidebarWidth] = useState(0);
+	useEffect(() => {
+		if (!open) return;
+		const update = () => {
+			// The DSH frame is a CSS grid with grid-template-columns: <sidebar>px minmax(0,1fr) <details>px.
+			// Find the frame element by its inline grid-template-columns style and read the first column width.
+			const frames = document.querySelectorAll('[style*="grid-template-columns"]');
+			for (const frame of frames) {
+				if (!(frame instanceof HTMLElement)) continue;
+				const cols = frame.style.gridTemplateColumns;
+				const match = cols.match(/^(\d+)px\s+minmax/);
+				if (match !== null) {
+					setSidebarWidth(Number(match[1]));
+					return;
+				}
+			}
+		};
+		update();
+		// Re-read on resize (sidebar drag, window resize, collapse/expand).
+		const observer = new ResizeObserver(update);
+		const frames = document.querySelectorAll('[style*="grid-template-columns"]');
+		for (const frame of frames) {
+			if (frame instanceof HTMLElement) observer.observe(frame);
+		}
+		return () => observer.disconnect();
+	}, [open]);
 
 	// Fallback project used as the create target while the All tab is active.
 	const fallbackPath = useMemo(() => {
@@ -1184,6 +1211,7 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 				// biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click only closes; no keyboard semantics apply to the scrim itself.
 				<div
 					className={C.overlay}
+					style={{ left: sidebarWidth, ["--dshst-sidebar-w" as string]: `${sidebarWidth}px` }}
 					onClick={(event) => {
 						if (event.target === event.currentTarget) setOpen(false);
 					}}
