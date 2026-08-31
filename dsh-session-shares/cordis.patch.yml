@@ -1,0 +1,7 @@
+# The @opendsh/dsh-plugin-session-shares bundle patch: mounts the plugin's
+# server half as one Cordis loader row. Apply this bundle after `dsh-base` +
+# `dsh-web-app`, which provide `storageDomain` and `webServer`.
+
+- insert:
+    - id: session-shares
+      name: '@opendsh/dsh-plugin-session-shares'

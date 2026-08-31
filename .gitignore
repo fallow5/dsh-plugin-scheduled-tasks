@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+lib/
+
+# Mnemon local state
+.mnemon/
+
+# Embedded separate git repos (other plugins in the monorepo)
+dsh-pin-sessions/
+
+# OS files
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log

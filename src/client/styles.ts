@@ -1,0 +1,118 @@
+/**
+ * Theme-aware stylesheet for the scheduled-tasks panel.
+ *
+ * Uses the same `--dsw-alias-*` design tokens as the shipped Cordis panel so
+ * the UI follows the active light/dark theme. The CSS is injected once by the
+ * client plugin body (`injectStyles`) using the same `data-plugin-css`
+ * mechanism the official client bundles use.
+ *
+ * @module @opendsh/dsh-plugin-scheduled-tasks
+ */
+
+/** Scoped class names referenced by the panel components. */
+export const C = {
+	trigger: "dshst-trigger",
+	triggerRail: "dshst-trigger-rail",
+	triggerLabel: "dshst-trigger-label",
+	overlay: "dshst-overlay",
+	card: "dshst-card",
+	header: "dshst-header",
+	title: "dshst-title",
+	contact: "dshst-contact",
+	body: "dshst-body",
+	footer: "dshst-footer",
+	note: "dshst-note",
+	row: "dshst-row",
+	name: "dshst-name",
+	meta: "dshst-meta",
+	badge: "dshst-badge",
+	badgeWarn: "dshst-badge-warn",
+	badgeError: "dshst-badge-error",
+	badgeSuccess: "dshst-badge-success",
+	badgeDim: "dshst-badge-dim",
+	btn: "dshst-btn",
+	btnPrimary: "dshst-btn-primary",
+	btnDanger: "dshst-btn-danger",
+	input: "dshst-input",
+	select: "dshst-select",
+	textarea: "dshst-textarea",
+	label: "dshst-label",
+	error: "dshst-error",
+	empty: "dshst-empty",
+	output: "dshst-output",
+	tabs: "dshst-tabs",
+	tab: "dshst-tab",
+	tabActive: "dshst-tab-active",
+	tabCount: "dshst-tab-count",
+	close: "dshst-close",
+} as const;
+
+const css = `
+.dshst-trigger{box-sizing:border-box;cursor:pointer;flex:1 0 auto;min-width:0;height:42px;color:var(--dsw-alias-label-primary);background:0 0;border:none;border-radius:12px;align-items:center;gap:8px;margin:4px -2px;padding:0 10px 0 8px;font-family:inherit;font-size:14px;line-height:22px;display:flex;overflow:hidden}
+.dshst-trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.dshst-trigger-rail{border-radius:50%;justify-content:center;gap:0;width:36px;height:36px;margin:8px 0 10px;padding:0;flex:none}
+.dshst-trigger-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dshst-overlay{position:fixed;inset:0;z-index:1000;background:var(--dsw-alias-bg-mask-1);backdrop-filter:var(--dsh-mask-blur);display:flex;align-items:center;justify-content:center}
+.dshst-card{box-sizing:border-box;background:var(--dsw-alias-bg-layer-2);width:800px;max-width:calc(100vw - 48px);height:min(800px,100vh - 48px);box-shadow:var(--dsw-shadow-lv3);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:24px;display:flex;flex-direction:column;overflow:hidden}
+.dshst-header{box-sizing:border-box;flex:none;justify-content:space-between;align-items:center;gap:8px;height:54px;padding:20px 14px 8px 10px;display:flex}
+.dshst-title{color:var(--dsw-alias-label-primary);font-size:16px;font-weight:500;line-height:24px;margin:0;flex:1}
+.dshst-contact{color:var(--dsw-alias-state-info-primary,var(--dsw-alias-label-secondary));font-size:11px;font-weight:400;line-height:16px;text-decoration:underline;margin-left:8px;cursor:pointer;white-space:nowrap}
+.dshst-contact:hover{text-decoration:underline;opacity:.8}
+.dshst-body{flex:1;min-height:0;padding:0 24px 24px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
+.dshst-footer{box-sizing:border-box;flex:none;padding:0 24px 24px}
+.dshst-note{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}
+.dshst-row{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);border-radius:12px;align-items:center;gap:8px;padding:8px 10px;display:flex}
+.dshst-name{min-width:0;color:var(--dsw-alias-label-primary);text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:14px;font-weight:500;line-height:22px;overflow:hidden}
+.dshst-meta{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}
+.dshst-badge{background:var(--dsw-alias-button-ghost-active-fill);color:var(--dsw-alias-label-caption);height:20px;border-radius:10px;flex:none;align-items:center;padding:0 6px;font-size:11px;line-height:20px;display:inline-flex}
+.dshst-badge-warn{background:var(--dsw-alias-state-warn-tertiary);color:var(--dsw-alias-state-warn-label)}
+.dshst-badge-error{background:var(--dsw-alias-interactive-bg-hover-danger);color:var(--dsw-alias-state-error-primary)}
+.dshst-badge-success{background:var(--dsw-alias-state-success-tertiary);color:var(--dsw-alias-state-success-primary)}
+.dshst-badge-dim{background:var(--dsw-alias-button-ghost-active-fill);color:var(--dsw-alias-label-caption)}
+.dshst-btn{border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);font-family:inherit;font-size:12px;line-height:24px;cursor:pointer;background:0 0;border-radius:999px;flex:none;padding:0 10px}
+.dshst-btn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}
+.dshst-btn:disabled{opacity:.4;cursor:default}
+.dshst-btn-primary{border-color:transparent;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-button-primary-dimmed)}
+.dshst-btn-primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}
+.dshst-btn-danger{color:var(--dsw-alias-state-error-primary)}
+.dshst-close{cursor:pointer;width:28px;height:28px;color:var(--dsw-alias-label-primary);background:0 0;border:none;border-radius:28px;justify-content:center;align-items:center;padding:0;display:inline-flex;flex:none}
+.dshst-close:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.dshst-input,.dshst-textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;border-radius:8px;padding:6px 10px;width:100%;font-size:14px;line-height:22px}
+.dshst-select{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center;background-size:12px 12px;color:var(--dsw-alias-label-primary);font:inherit;border-radius:8px;padding:6px 32px 6px 10px;width:100%;font-size:14px;line-height:22px;cursor:pointer;appearance:none}
+.dshst-select:focus{border-color:var(--dsw-alias-brand-primary);outline:none}
+.dshst-select:disabled{opacity:.6;cursor:default}
+.dshst-textarea{min-height:96px;resize:vertical;font-family:var(--dsh-font-mono,monospace)}
+.dshst-label{color:var(--dsw-alias-label-caption);font-size:12px;line-height:18px}
+.dshst-error{color:var(--dsw-alias-state-error-primary);background:var(--dsw-alias-interactive-bg-hover-danger);border-radius:8px;padding:8px 12px;font-size:12px;line-height:18px}
+.dshst-empty{color:var(--dsw-alias-label-tertiary);font-size:14px;text-align:center;padding:32px 12px}
+.dshst-output{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;white-space:pre-wrap;word-break:break-word;margin:4px 0 0;font-family:var(--dsh-font-mono,monospace)}
+.dshst-tabs{box-sizing:border-box;display:flex;gap:4px;flex:none;overflow-x:auto;padding:0;scrollbar-width:none}
+.dshst-tabs::-webkit-scrollbar{display:none}
+.dshst-tab{border:none;background:0 0;color:var(--dsw-alias-label-primary);border-radius:12px;cursor:pointer;flex:none;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-family:inherit;font-size:14px;font-weight:400;line-height:22px;display:inline-flex;white-space:nowrap}
+.dshst-tab:hover{background:var(--dsw-specific-sidebar-nav-item-hover,var(--dsw-alias-interactive-bg-hover))}
+.dshst-tab-active{background:var(--dsw-specific-sidebar-nav-item-active,var(--dsw-alias-interactive-bg-selected,var(--dsw-alias-interactive-bg-hover)))}
+.dshst-tab-active:hover{background:var(--dsw-specific-sidebar-nav-item-active,var(--dsw-alias-interactive-bg-selected,var(--dsw-alias-interactive-bg-hover)))}
+.dshst-tab-count{opacity:.62}
+.dshst-tab-active .dshst-tab-count{opacity:.78}
+/* ── coexistence override ───────────────────────────────────────────────
+   The @lemoncat7/dsh-knowledge plugin registers its trigger in the same
+   sidebar.footer.action list slot with width:calc(100% + 8px); flex:none,
+   which monopolises the row and pushes every other trigger off-screen.
+   Override it to share the row fairly when both plugins are present, and
+   align its height/padding with the native sidebar trigger style so the
+   two buttons look consistent. The rail variant keeps its fixed 36px icon. */
+.dsh-knowledge-trigger{width:auto!important;flex:1 0 auto!important;margin:4px -2px!important;height:42px!important;padding:0 10px 0 8px!important}
+.dsh-knowledge-trigger--rail{width:36px!important;height:36px!important;flex:none!important}
+`;
+
+/** Inject the stylesheet once (idempotent), mirroring the official CSS-module mechanism. */
+export function injectStyles(): void {
+	if (typeof document === "undefined") return;
+	const tagId = "@opendsh/dsh-plugin-scheduled-tasks/panel.css";
+	if (document.querySelector(`style[data-plugin-css=${JSON.stringify(tagId)}]`) !== null) return;
+	const tag = document.createElement("style");
+	tag.dataset.plugin = "@opendsh/dsh-plugin-scheduled-tasks";
+	tag.dataset.pluginCss = tagId;
+	tag.textContent = css;
+	document.head.appendChild(tag);
+}

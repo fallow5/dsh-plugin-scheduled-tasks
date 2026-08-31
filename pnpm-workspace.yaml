@@ -1,0 +1,4 @@
+packages:
+  - .
+  - dsh-pin-sessions
+  - dsh-session-shares
