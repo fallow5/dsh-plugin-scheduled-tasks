@@ -12,6 +12,7 @@ import {
 	catalogResultSchema,
 	createInputSchema,
 	deleteResultSchema,
+	presetsResultSchema,
 	runViewSchema,
 	taskViewSchema,
 	updateInputSchema,
@@ -152,6 +153,15 @@ export const TYPERT_REMOTE: TypertRemoteContribution = {
 			invocation: direct,
 			parameters: [],
 			result: result("CatalogResult", catalogResultSchema),
+		},
+		{
+			id: `${PKG}#tasks/presets`,
+			service: "tasks",
+			namespace: "tasks",
+			method: "presets",
+			invocation: direct,
+			parameters: [],
+			result: result("PresetsResult", presetsResultSchema),
 		},
 	],
 };

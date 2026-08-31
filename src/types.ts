@@ -61,6 +61,8 @@ export const taskSchema = z.object({
 	timeZone: z.string().min(1).max(100).optional(),
 	/** Explicit model override; runs use the deployment default selection when absent. */
 	model: taskModelSchema.optional(),
+	/** Agent preset id for the run; absent means the deployment default preset. */
+	preset: z.string().min(1).max(200).optional(),
 	/** Whether the scheduler may dispatch this task. */
 	enabled: z.boolean(),
 	/** `active` tasks are schedulable; `finished` one-shots no longer run. */

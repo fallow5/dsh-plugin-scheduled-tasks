@@ -242,7 +242,7 @@ export class TaskExecutor {
 			const presets = ctx.get("agentPresets");
 			let setup: Parameters<NonNullable<typeof agents>["create"]>[0]["setup"];
 			if (presets !== undefined && typeof presets.resolve === "function" && typeof presets.mount === "function") {
-				const preset = await presets.resolve(undefined);
+				const preset = await presets.resolve(task.preset);
 				meta.agentPreset = preset.id;
 				setup = async (agentCtx) => {
 					installModelSelection(agentCtx, {

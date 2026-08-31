@@ -60,6 +60,8 @@ export interface TaskCreateInput {
 	timeZone?: string;
 	/** Explicit provider/model override for runs; absent means the deployment default. */
 	model?: TaskModel;
+	/** Agent preset id for the run; absent means the deployment default preset. */
+	preset?: string;
 	enabled?: boolean;
 	/** Optional start-of-day UTC instant from which the task is effective. */
 	effectiveFrom?: string;
@@ -82,6 +84,8 @@ export interface TaskUpdateInput {
 	timeZone?: string;
 	/** Set to replace the override, or `null` to clear it back to the default. */
 	model?: TaskModel | null;
+	/** Set to replace, or `null` to clear back to the default preset. */
+	preset?: string | null;
 	enabled?: boolean;
 	/** Set to replace, or `null` to clear back to always-effective. */
 	effectiveFrom?: string | null;
@@ -228,6 +232,7 @@ export class TasksStore {
 			...(target.cron === undefined ? {} : { cron: target.cron }),
 			...(target.timeZone === undefined ? {} : { timeZone: target.timeZone }),
 			...(input.model === undefined ? {} : { model: normalizeModel(input.model) }),
+			...(input.preset === undefined ? {} : { preset: input.preset.trim() }),
 			enabled: input.enabled ?? true,
 			state: "active",
 			...(effectiveFrom === undefined ? {} : { effectiveFrom }),
@@ -254,6 +259,10 @@ export class TasksStore {
 			if (patch.model === null) delete next.model;
 			else next.model = normalizeModel(patch.model);
 		}
+		if (patch.preset !== undefined) {
+			if (patch.preset === null) delete next.preset;
+			else next.preset = patch.preset.trim();
+		}
 		if (patch.effectiveFrom !== undefined) {
 			if (patch.effectiveFrom === null) delete next.effectiveFrom;
 			else next.effectiveFrom = normalizeEffectiveDate(patch.effectiveFrom, "effectiveFrom")!;
@@ -264,7 +273,7 @@ export class TasksStore {
 		}
 		validateEffectiveRange(next.effectiveFrom, next.effectiveUntil);
 		if (patch.kind !== undefined) {
-			const { effectiveFrom: _ef, effectiveUntil: _eu, ...patchRest } = patch;
+			const { effectiveFrom: _ef, effectiveUntil: _eu, preset: _p, ...patchRest } = patch;
 			const target = resolveTaskTarget(
 				{
 					...existing,

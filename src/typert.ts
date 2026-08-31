@@ -14,6 +14,7 @@ import {
 	catalogResultSchema,
 	createInputSchema,
 	deleteResultSchema,
+	presetsResultSchema,
 	runViewSchema,
 	taskViewSchema,
 	updateInputSchema,
@@ -58,6 +59,7 @@ export const TYPERT = {
 					{ name: "runNow", kind: "method", signature: "(id: string): Promise<RunView>" },
 					{ name: "history", kind: "method", signature: "(id: string): RunView[]" },
 					{ name: "catalog", kind: "method", signature: "(): Promise<CatalogResult>" },
+					{ name: "presets", kind: "method", signature: "(): Promise<PresetsResult>" },
 				],
 				types: [
 					{ name: "TaskId", declaration: "export type TaskId = string;" },
@@ -70,7 +72,7 @@ export const TYPERT = {
 					{
 						name: "TaskView",
 						declaration:
-							"export interface TaskView { id: string; projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; scheduledAt: string; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; enabled: boolean; state: 'active' | 'finished'; effectiveFrom?: string; effectiveUntil?: string; createdAt: string; updatedAt: string; lastRunAt?: string; lastRunId?: string; }",
+							"export interface TaskView { id: string; projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; scheduledAt: string; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; preset?: string; enabled: boolean; state: 'active' | 'finished'; effectiveFrom?: string; effectiveUntil?: string; createdAt: string; updatedAt: string; lastRunAt?: string; lastRunId?: string; }",
 					},
 					{
 						name: "RunView",
@@ -80,12 +82,12 @@ export const TYPERT = {
 					{
 						name: "CreateInput",
 						declaration:
-							"export interface CreateInput { projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; enabled?: boolean; effectiveFrom?: string; effectiveUntil?: string; }",
+							"export interface CreateInput { projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; preset?: string; enabled?: boolean; effectiveFrom?: string; effectiveUntil?: string; }",
 					},
 					{
 						name: "UpdateInput",
 						declaration:
-							"export interface UpdateInput { name?: string; prompt?: string; kind?: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel | null; enabled?: boolean; effectiveFrom?: string | null; effectiveUntil?: string | null; }",
+							"export interface UpdateInput { name?: string; prompt?: string; kind?: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel | null; preset?: string | null; enabled?: boolean; effectiveFrom?: string | null; effectiveUntil?: string | null; }",
 					},
 					{
 						name: "CatalogModel",
@@ -99,6 +101,14 @@ export const TYPERT = {
 						name: "CatalogResult",
 						declaration:
 							"export interface CatalogResult { groups: ModelCatalogGroup[]; default: { provider: string; model: string } | null; }",
+					},
+					{
+						name: "PresetItem",
+						declaration: "export interface PresetItem { id: string; name: string; description?: string; }",
+					},
+					{
+						name: "PresetsResult",
+						declaration: "export interface PresetsResult { presets: PresetItem[]; default: string | null; }",
 					},
 				],
 			},
@@ -218,6 +228,15 @@ export const TYPERT = {
 			invocation: direct,
 			parameters: [],
 			result: result("CatalogResult", catalogResultSchema),
+		},
+		{
+			id: `${PKG}#tasks/presets`,
+			service: "tasks",
+			namespace: "tasks",
+			method: "presets",
+			invocation: direct,
+			parameters: [],
+			result: result("PresetsResult", presetsResultSchema),
 		},
 	],
 };

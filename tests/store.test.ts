@@ -272,3 +272,58 @@ describe("TasksStore effective date range", () => {
 		expect(updated.effectiveUntil).toBeUndefined();
 	});
 });
+
+describe("TasksStore agent preset", () => {
+	it("persists a preset on create", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const task = await store.create({
+			projectPath: "/projects/demo",
+			name: "with preset",
+			prompt: "run with a preset",
+			kind: "at",
+			at: FUTURE_AT,
+			preset: "standard",
+		});
+		expect(task.preset).toBe("standard");
+	});
+
+	it("keeps preset absent when create omits it", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const task = await store.create({
+			projectPath: "/projects/demo",
+			name: "no preset",
+			prompt: "run without a preset",
+			kind: "at",
+			at: FUTURE_AT,
+		});
+		expect(task.preset).toBeUndefined();
+	});
+
+	it("updates preset on update", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const created = await store.create({
+			projectPath: "/projects/demo",
+			name: "preset task",
+			prompt: "run with a preset",
+			kind: "at",
+			at: FUTURE_AT,
+			preset: "standard",
+		});
+		const updated = await store.update(created.id, { preset: "code" });
+		expect(updated.preset).toBe("code");
+	});
+
+	it("clears preset with null on update", async () => {
+		const store = new TasksStore(makeCtx(), makeDomain(), { keepRunsPerTask: 20 });
+		const created = await store.create({
+			projectPath: "/projects/demo",
+			name: "preset task",
+			prompt: "run with a preset",
+			kind: "at",
+			at: FUTURE_AT,
+			preset: "standard",
+		});
+		const updated = await store.update(created.id, { preset: null });
+		expect(updated.preset).toBeUndefined();
+	});
+});

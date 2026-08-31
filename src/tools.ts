@@ -99,6 +99,7 @@ const TASK_VIEW_SCHEMA = {
 		},
 		enabled: { type: "boolean", required: true },
 		state: { type: "string", required: true },
+		preset: { type: "string" },
 		effectiveFrom: { type: "string" },
 		effectiveUntil: { type: "string" },
 		createdAt: { type: "string", required: true },
@@ -164,6 +165,7 @@ export function buildCreateInput(args: {
 	enabled?: unknown;
 	effective_from?: unknown;
 	effective_until?: unknown;
+	preset?: unknown;
 }): { input: TaskCreateInput } | { error: ToolError } {
 	if (typeof args.prompt !== "string" || args.prompt.trim().length === 0) {
 		return { error: { code: "invalid_prompt", message: "prompt must be a non-empty string." } };
@@ -241,6 +243,9 @@ export function buildCreateInput(args: {
 			...(args.effective_until === undefined || typeof args.effective_until !== "string"
 				? {}
 				: { effectiveUntil: args.effective_until }),
+			...(args.preset === undefined || typeof args.preset !== "string"
+				? {}
+				: { preset: args.preset.trim() }),
 		},
 	};
 }
@@ -300,6 +305,10 @@ export function registerTaskTools(store: TasksStore, scheduler: TaskScheduler, a
 						effective_until: {
 							type: "string",
 							description: "Optional ISO date until which the task is effective (e.g. 2026-12-31). Leave absent for always.",
+						},
+						preset: {
+							type: "string",
+							description: "Optional agent preset id for the run (e.g. 'standard', 'code', 'minimal'). Leave absent for the deployment default.",
 						},
 					},
 					output: {

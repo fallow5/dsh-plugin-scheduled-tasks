@@ -21,6 +21,7 @@ export const taskViewSchema = z.object({
 	cron: z.string().optional(),
 	timeZone: z.string().optional(),
 	model: taskModelSchema.optional(),
+	preset: z.string().optional(),
 	enabled: z.boolean(),
 	state: z.enum(["active", "finished"]),
 	effectiveFrom: z.string().optional(),
@@ -68,6 +69,7 @@ export const createInputSchema = z.object({
 	cron: z.string().optional(),
 	timeZone: z.string().optional(),
 	model: taskModelSchema.optional(),
+	preset: z.string().optional(),
 	enabled: z.boolean().optional(),
 	effectiveFrom: z.string().optional(),
 	effectiveUntil: z.string().optional(),
@@ -84,6 +86,7 @@ export const updateInputSchema = z.object({
 	cron: z.string().optional(),
 	timeZone: z.string().optional(),
 	model: z.union([taskModelSchema, z.null()]).optional(),
+	preset: z.union([z.string(), z.null()]).optional(),
 	enabled: z.boolean().optional(),
 	effectiveFrom: z.union([z.string(), z.null()]).optional(),
 	effectiveUntil: z.union([z.string(), z.null()]).optional(),
@@ -122,9 +125,26 @@ export const catalogResultSchema = z.object({
 		.nullable(),
 });
 
+/** One agent preset advertised in `tasks/presets`. */
+export const presetItemSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	description: z.string().optional(),
+});
+
+/** Wire result of `tasks/presets`: every discovered agent preset. */
+export const presetsResultSchema = z.object({
+	/** Presets in discovery order. */
+	presets: z.array(presetItemSchema),
+	/** Current default preset id when the deployment exposes one. */
+	default: z.string().nullable(),
+});
+
 export type TaskView = z.infer<typeof taskViewSchema>;
 export type RunView = z.infer<typeof runViewSchema>;
 export type CreateInput = z.infer<typeof createInputSchema>;
 export type UpdateInput = z.infer<typeof updateInputSchema>;
 export type CatalogResult = z.infer<typeof catalogResultSchema>;
 export type ModelCatalogGroup = z.infer<typeof modelCatalogGroupSchema>;
+export type PresetItem = z.infer<typeof presetItemSchema>;
+export type PresetsResult = z.infer<typeof presetsResultSchema>;

@@ -15,7 +15,7 @@ import type { WorkspaceListState } from "@deepseek-ai/dsh-client-runtime/client"
 import { IconChecklistOutline14, IconCloseOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { SnapshotSelectorHook, TranslateNS } from "@deepseek-ai/dsh-client-ui-slots";
 import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CatalogResult, CreateInput, RunView, TaskView, UpdateInput } from "../schemas.js";
+import type { CatalogResult, CreateInput, PresetsResult, RunView, TaskView, UpdateInput } from "../schemas.js";
 import type { RpcResult, TasksRemote } from "./remote.js";
 import { C } from "./styles.js";
 
@@ -359,6 +359,11 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 	const [catalog, setCatalog] = useState<CatalogResult | undefined>();
 	const [catalogError, setCatalogError] = useState("");
 	const [catalogBusy, setCatalogBusy] = useState(false);
+	// Preset selection: "" means "use the deployment default".
+	const [presetKey, setPresetKey] = useState(() => initial?.preset ?? "");
+	const [presetsCatalog, setPresetsCatalog] = useState<PresetsResult | undefined>();
+	const [presetsError, setPresetsError] = useState("");
+	const [presetsBusy, setPresetsBusy] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 
@@ -391,6 +396,20 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 	useEffect(() => {
 		void loadCatalog();
 	}, [loadCatalog]);
+
+	/** Load the agent-preset catalog when the form mounts. */
+	const loadPresets = useCallback(async () => {
+		setPresetsBusy(true);
+		setPresetsError("");
+		const result = await tasks.presets();
+		if (result.ok) setPresetsCatalog(result.value);
+		else setPresetsError(errorText(result));
+		setPresetsBusy(false);
+	}, [tasks]);
+
+	useEffect(() => {
+		void loadPresets();
+	}, [loadPresets]);
 
 	/** Flat option list; a stored selection missing from the catalog is kept as a fallback. */
 	const modelOptions = useMemo<ModelOption[]>(() => {
@@ -482,6 +501,9 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 				input = { ...input, model: { provider: selected.provider, model: selected.model } };
 			}
 		}
+		if (presetKey !== "") {
+			input = { ...input, preset: presetKey };
+		}
 		setBusy(true);
 		setError("");
 		try {
@@ -495,6 +517,7 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 								...input,
 								projectPath: projectPath.trim(),
 								...(modelKey === "" ? { model: null } : {}),
+								...(presetKey === "" ? { preset: null } : {}),
 								...(effectiveFrom === "" ? { effectiveFrom: null } : {}),
 								...(effectiveUntil === "" ? { effectiveUntil: null } : {}),
 							} as unknown as UpdateInput,
@@ -749,6 +772,37 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 									</option>
 								))}
 							</optgroup>
+						))}
+					</select>
+				)}
+			</div>
+			<div style={layout.field}>
+				<div className={C.label}>{t("form.agentPreset")}</div>
+				{presetsError !== "" && (
+					<div style={layout.row}>
+						<span className={C.error}>{presetsError}</span>
+						<button type="button" className={C.btn} disabled={presetsBusy} onClick={() => void loadPresets()}>
+							{t("form.agentPresetReload")}
+						</button>
+					</div>
+				)}
+				{presetsError === "" && (presetsCatalog === undefined || presetsCatalog.presets.length === 0) && (
+					<div className={C.meta}>{presetsBusy ? t("form.agentPresetLoading") : t("form.agentPresetEmpty")}</div>
+				)}
+				{presetsCatalog !== undefined && presetsCatalog.presets.length > 0 && (
+					<select className={C.select} value={presetKey} onChange={(event) => setPresetKey(event.target.value)}>
+						<option value="">
+							{presetsCatalog.default !== null
+								? t("form.agentPresetDefaultWith", {
+										name: presetsCatalog.presets.find((p) => p.id === presetsCatalog.default)?.name ?? presetsCatalog.default,
+									})
+								: t("form.agentPresetDefault")}
+						</option>
+						{presetsCatalog.presets.map((preset) => (
+							<option key={preset.id} value={preset.id}>
+								{preset.name}
+								{preset.description !== undefined ? ` — ${preset.description}` : ""}
+							</option>
 						))}
 					</select>
 				)}
@@ -1072,6 +1126,8 @@ export function TasksFooterAction(props: TasksFooterActionProps) {
 														{nextRunText(t, task)}
 														{task.model !== undefined &&
 															` · ${t("model.used", { provider: task.model.provider, model: task.model.model })}`}
+														{task.preset !== undefined &&
+															` · ${t("agentPreset.used", { name: task.preset })}`}
 														{(task.effectiveFrom !== undefined || task.effectiveUntil !== undefined) &&
 															` · ${effectiveRangeText(t, task)}`}
 													</div>

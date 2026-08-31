@@ -110,4 +110,16 @@ describe("buildCreateInput", () => {
 			expect(built.input.effectiveUntil).toBeUndefined();
 		}
 	});
+
+	it("passes through a preset selection", () => {
+		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z", preset: "standard" });
+		if ("input" in built) {
+			expect(built.input.preset).toBe("standard");
+		}
+	});
+
+	it("omits preset when the argument is absent", () => {
+		const built = buildCreateInput({ prompt: "x", at: "2026-08-20T09:00:00Z" });
+		if ("input" in built) expect(built.input.preset).toBeUndefined();
+	});
 });
