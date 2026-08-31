@@ -1077,7 +1077,6 @@ export function TasksOverlay(props: TasksOverlayProps) {
 	const { tasks, t } = props;
 	const workspaceItems = props.useWorkspaces((state) => state.items);
 	const recentWorkspaceId = props.useWorkspaces((state) => state.recentWorkspaceId);
-	const open = useSyncExternalStore(panelStore.subscribe, panelStore.getSnapshot);
 	// Active filter tab: `undefined` selects the All tab (every project).
 	const [selectedPath, setSelectedPath] = useState<string | undefined>();
 	const [taskList, setTaskList] = useState<TaskView[]>([]);
@@ -1085,39 +1084,6 @@ export function TasksOverlay(props: TasksOverlayProps) {
 	const [error, setError] = useState("");
 	const [busy, setBusy] = useState(false);
 	const tabsRef = useRef<HTMLDivElement>(null);
-	// Track the sidebar width so the panel can offset past it (not cover the sidebar).
-	const [sidebarWidth, setSidebarWidth] = useState(0);
-
-	useEffect(() => {
-		if (!open) return;
-		const update = () => {
-			const frames = document.querySelectorAll('[style*="grid-template-columns"]');
-			for (const frame of frames) {
-				if (!(frame instanceof HTMLElement)) continue;
-				const cols = frame.style.gridTemplateColumns;
-				const match = cols.match(/^(\d+)px\s+minmax/);
-				if (match !== null) {
-					setSidebarWidth(Number(match[1]));
-					return;
-				}
-			}
-		};
-		update();
-		const observer = new ResizeObserver(update);
-		const frames = document.querySelectorAll('[style*="grid-template-columns"]');
-		for (const frame of frames) {
-			if (frame instanceof HTMLElement) observer.observe(frame);
-		}
-		return () => observer.disconnect();
-	}, [open]);
-
-	// Reset to list view and clear errors when the panel is opened.
-	useEffect(() => {
-		if (open) {
-			setView({ kind: "list" });
-			setError("");
-		}
-	}, [open]);
 
 	// Fallback project used as the create target while the All tab is active.
 	const fallbackPath = useMemo(() => {
@@ -1157,24 +1123,22 @@ export function TasksOverlay(props: TasksOverlayProps) {
 		if (!stillListed || (counts.get(selectedPath) ?? 0) === 0) setSelectedPath(undefined);
 	}, [workspaceItems, selectedPath, counts]);
 
-	// Load the task list when the panel opens.
+	// Load the task list on mount.
 	useEffect(() => {
-		if (open) void refresh();
-	}, [open, refresh]);
+		void refresh();
+	}, [refresh]);
 
 	// Close on Escape.
 	useEffect(() => {
-		if (!open) return;
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") panelStore.close();
 		};
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [open]);
+	}, []);
 
 	// Horizontal wheel scroll for the tab strip.
 	useEffect(() => {
-		if (!open) return;
 		const el = tabsRef.current;
 		if (el === null) return;
 		const onWheel = (event: WheelEvent) => {
@@ -1187,7 +1151,7 @@ export function TasksOverlay(props: TasksOverlayProps) {
 		};
 		el.addEventListener("wheel", onWheel, { passive: false });
 		return () => el.removeEventListener("wheel", onWheel);
-	}, [open, view.kind]);
+	}, [view.kind]);
 
 	// Arrow keys move the active filter tab (wrapping at both ends).
 	const onTablistKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -1246,23 +1210,17 @@ export function TasksOverlay(props: TasksOverlayProps) {
 			});
 	};
 
-	if (!open) return null;
-
 	return (
-		<div
-			className={C.overlay}
-			style={{ left: sidebarWidth, ["--dshst-sidebar-w" as string]: `${sidebarWidth}px` }}
-		>
-			<div className={C.card} role="dialog" aria-label={t("title")}>
-				<div className={C.header}>
-					<IconChecklistOutline14 size={16} />
-					<h2 className={C.title}>
-						{t("title")}
-					</h2>
-					<button type="button" className={C.close} onClick={() => panelStore.close()} aria-label={t("close")}>
-						<IconCloseOutline16 size={16} />
-					</button>
-				</div>
+		<div className={C.card}>
+			<div className={C.header}>
+				<IconChecklistOutline14 size={16} />
+				<h2 className={C.title}>
+					{t("title")}
+				</h2>
+				<button type="button" className={C.close} onClick={() => panelStore.close()} aria-label={t("close")}>
+					<IconCloseOutline16 size={16} />
+				</button>
+			</div>
 				<div className={C.body}>
 					{error !== "" && (
 						<div className={C.error}>
@@ -1405,6 +1363,5 @@ export function TasksOverlay(props: TasksOverlayProps) {
 					<span className={C.note}>{t("footer.note")}</span>
 				</div>
 			</div>
-		</div>
 	);
 }

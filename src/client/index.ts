@@ -2,8 +2,10 @@
  * Client plugin body: mounts the `tasks` remote namespace, registers the
  * `scheduled-tasks` locale dictionaries, then registers:
  *   1. The scheduled-tasks trigger button into the sidebar footer action seat.
- *   2. The scheduled-tasks panel body into the shell.overlay seat (renders
- *      inline in the content area, not as a modal popup).
+ *   2. The scheduled-tasks panel body dynamically into the `conversation` slot
+ *      (renders inline in the content area, not as a modal popup). The panel
+ *      is registered/unregistered on toggle, mirroring the knowledge-base
+ *      plugin pattern.
  *
  * @module @opendsh/dsh-plugin-scheduled-tasks
  */
@@ -13,6 +15,7 @@ import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 // Load the sidebar slot declarations (module augmentation for the SlotMap).
 import type {} from "@deepseek-ai/dsh-client-ui-sidebar/client";
 import { en, type ScheduledTasksKey, zh } from "./locales.js";
+import { panelStore } from "./panelState.js";
 import type { TasksRemote } from "./remote.js";
 import { injectStyles } from "./styles.js";
 import { TasksFooterAction, type TasksFooterActionProps, TasksOverlay, type TasksOverlayProps } from "./TasksPanel.js";
@@ -27,10 +30,10 @@ declare module "@deepseek-ai/dsh-client-ui-slots" {
 		"scheduled-tasks": ScheduledTasksKey;
 	}
 	interface SlotMap {
-		/** Shell overlay layer (declared by dsh-client-ui-layout; list, root scope). */
-		"shell.overlay": {
-			kind: "list";
-			scope: "root";
+		/** Conversation slot (declared by dsh-client-ui-layout; single, session-maybe scope). */
+		conversation: {
+			kind: "single";
+			scope: "session-maybe";
 		};
 	}
 }
@@ -61,18 +64,44 @@ export async function apply(ctx: ClientContext) {
 			TasksFooterAction,
 		),
 	);
-	// 2. Panel body in the shell overlay (renders inline in the content area).
-	ctx.slots.inject("shell.overlay", () =>
-		ctx.slots.register(
+	// 2. Panel body dynamically registered into the `conversation` slot (inline
+	//    in the content area). Registered on open, disposed on close — mirrors
+	//    the knowledge-base plugin pattern. Uses priority -1 so the panel
+	//    shadows the normal conversation content when active.
+	let disposePanel: (() => void) | undefined;
+	const registerPanel = () => {
+		if (disposePanel !== undefined) return;
+		disposePanel = ctx.slots.register(
 			{
-				name: "shell.overlay",
-				id: "scheduled-tasks",
+				name: "conversation",
+				priority: -1,
 				locale: NS,
 				inject: (): Pick<TasksOverlayProps, "tasks"> => ({
 					tasks: ctx.get("remote.tasks") as TasksRemote,
 				}),
 			},
 			TasksOverlay,
-		),
+		);
+	};
+	const unregisterPanel = () => {
+		if (disposePanel !== undefined) {
+			disposePanel();
+			disposePanel = undefined;
+		}
+	};
+	// Subscribe to panel open/close state — register/unregister accordingly.
+	const unsubscribe = panelStore.subscribe(() => {
+		if (panelStore.getSnapshot()) registerPanel();
+		else unregisterPanel();
+	});
+	// Close when another plugin workspace activates.
+	const unsubscribeWorkspace = panelStore.observeWorkspaceClose();
+	ctx.effect(
+		() => () => {
+			unsubscribe();
+			unsubscribeWorkspace();
+			unregisterPanel();
+		},
+		"scheduled-tasks: conversation panel lifecycle",
 	);
 }
