@@ -12,7 +12,7 @@
  */
 
 import type { WorkspaceListState } from "@deepseek-ai/dsh-client-runtime/client";
-import { IconChecklistOutline14, IconCloseOutline16 } from "@deepseek-ai/dsh-client-ui-primitives";
+import { IconChecklistOutline14, IconChevronLeftOutline14 } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { SnapshotSelectorHook, TranslateNS } from "@deepseek-ai/dsh-client-ui-slots";
 import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CatalogResult, CreateInput, ExpertsResult, RunView, SkillsResult, TaskView, UpdateInput } from "../schemas.js";
@@ -1213,13 +1213,13 @@ export function TasksOverlay(props: TasksOverlayProps) {
 	return (
 		<div className={C.card}>
 			<div className={C.header}>
+				<button type="button" className={C.close} onClick={() => panelStore.close()} aria-label={t("close")} title={t("close")}>
+					<IconChevronLeftOutline14 size={15} />
+				</button>
 				<IconChecklistOutline14 size={16} />
 				<h2 className={C.title}>
 					{t("title")}
 				</h2>
-				<button type="button" className={C.close} onClick={() => panelStore.close()} aria-label={t("close")}>
-					<IconCloseOutline16 size={16} />
-				</button>
 			</div>
 				<div className={C.body}>
 					{error !== "" && (

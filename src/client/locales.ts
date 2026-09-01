@@ -132,7 +132,7 @@ export const zh = {
 	"tabs.label": "按工作空间筛选",
 	"tabs.all": "全部",
 	// Dialog chrome.
-	close: "关闭",
+	close: "返回会话",
 	dismiss: "忽略",
 	// Footer note.
 	"footer.note":
@@ -258,7 +258,7 @@ export const en: Record<ScheduledTasksKey, string> = {
 	"list.confirmDelete": 'Delete task "{name}" and its run history?',
 	"tabs.label": "Filter by workspace",
 	"tabs.all": "All",
-	close: "Close",
+	close: "Back to conversation",
 	dismiss: "Dismiss",
 	"footer.note":
 		"Automation tasks only fire while the DSH Web process is running; tasks that come due after a restart are run once as a catch-up and marked accordingly. Run sessions appear in the workspace's conversation list.",

@@ -79,8 +79,10 @@ const css = `
 .dshst-btn-primary{border-color:transparent;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-button-primary-dimmed)}
 .dshst-btn-primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}
 .dshst-btn-danger{color:var(--dsw-alias-state-error-primary)}
-.dshst-close{cursor:pointer;width:28px;height:28px;color:var(--dsw-alias-label-primary);background:0 0;border:none;border-radius:28px;justify-content:center;align-items:center;padding:0;display:inline-flex;flex:none}
-.dshst-close:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.dshst-close{cursor:pointer;width:30px;height:30px;color:var(--dsw-alias-label-secondary);background:transparent;border:1px solid transparent;border-radius:9px;justify-content:center;align-items:center;padding:0;display:inline-flex;flex:none;-webkit-tap-highlight-color:transparent;transition:color 140ms ease,background 140ms ease,border-color 140ms ease,transform 140ms ease}
+.dshst-close:hover{border-color:var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}
+.dshst-close:active{transform:scale(.96)}
+.dshst-close>svg{display:block;pointer-events:none}
 .dshst-input,.dshst-textarea{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;border-radius:8px;padding:6px 10px;width:100%;font-size:14px;line-height:22px}
 .dshst-select{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center;background-size:12px 12px;color:var(--dsw-alias-label-primary);font:inherit;border-radius:8px;padding:6px 32px 6px 10px;width:100%;font-size:14px;line-height:22px;cursor:pointer;appearance:none}
 .dshst-select:focus{border-color:var(--dsw-alias-brand-primary);outline:none}
