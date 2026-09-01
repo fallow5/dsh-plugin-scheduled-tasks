@@ -74,7 +74,7 @@ export const TYPERT = {
 					{
 						name: "TaskView",
 						declaration:
-							"export interface TaskView { id: string; projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; scheduledAt: string; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; expert?: string; skills?: string[]; reuseKinds?: ('at' | 'every' | 'cron')[]; lastSessionId?: string; enabled: boolean; state: 'active' | 'finished'; effectiveFrom?: string; effectiveUntil?: string; createdAt: string; updatedAt: string; lastRunAt?: string; lastRunId?: string; }",
+							"export interface TaskView { id: string; projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; scheduledAt: string; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; expert?: string; skills?: string[]; reuseKinds?: ('at' | 'every' | 'cron')[]; reuseMode?: 'weekly' | 'monthly'; lastSessionId?: string; enabled: boolean; state: 'active' | 'finished'; effectiveFrom?: string; effectiveUntil?: string; createdAt: string; updatedAt: string; lastRunAt?: string; lastRunId?: string; }",
 					},
 					{
 						name: "RunView",
@@ -84,12 +84,12 @@ export const TYPERT = {
 					{
 						name: "CreateInput",
 						declaration:
-							"export interface CreateInput { projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; expert?: string; skills?: string[]; reuseKinds?: ('at' | 'every' | 'cron')[]; enabled?: boolean; effectiveFrom?: string; effectiveUntil?: string; }",
+							"export interface CreateInput { projectPath: string; name: string; prompt: string; kind: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel; expert?: string; skills?: string[]; reuseKinds?: ('at' | 'every' | 'cron')[]; reuseMode?: 'weekly' | 'monthly'; enabled?: boolean; effectiveFrom?: string; effectiveUntil?: string; }",
 					},
 					{
 						name: "UpdateInput",
 						declaration:
-							"export interface UpdateInput { name?: string; prompt?: string; kind?: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel | null; expert?: string | null; skills?: string[] | null; reuseKinds?: ('at' | 'every' | 'cron')[] | null; enabled?: boolean; effectiveFrom?: string | null; effectiveUntil?: string | null; }",
+							"export interface UpdateInput { name?: string; prompt?: string; kind?: 'at' | 'every' | 'cron'; at?: string | { date: string; time: string; time_zone: string }; everySeconds?: number; cron?: string; timeZone?: string; model?: TaskModel | null; expert?: string | null; skills?: string[] | null; reuseKinds?: ('at' | 'every' | 'cron')[] | null; reuseMode?: 'weekly' | 'monthly' | null; enabled?: boolean; effectiveFrom?: string | null; effectiveUntil?: string | null; }",
 					},
 					{
 						name: "CatalogModel",

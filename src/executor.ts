@@ -119,6 +119,28 @@ function truncate(text: string, maxLength: number): string {
 	return `${text.slice(0, maxLength - marker.length)}${marker}`;
 }
 
+/**
+ * Compute a stable period key for session rotation.
+ * - `weekly`: ISO year-week (e.g. `2026-W03`), so sessions rotate every Monday.
+ * - `monthly`: calendar year-month (e.g. `2026-01`), so sessions rotate on the 1st.
+ */
+function computePeriodKey(mode: "weekly" | "monthly"): string {
+	const now = new Date();
+	if (mode === "monthly") {
+		return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+	}
+	// ISO week number calculation.
+	const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+	const dayNum = (d.getUTCDay() + 6) % 7; // Monday = 0
+	d.setUTCDate(d.getUTCDate() - dayNum + 3); // Thursday of this week
+	const isoYear = d.getUTCFullYear();
+	const firstThursday = new Date(Date.UTC(isoYear, 0, 4));
+	const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+	const weekNum =
+		1 + Math.round(((d.getTime() - firstThursday.getTime()) / 86_400_000 - firstDayNum + 3) / 7);
+	return `${isoYear}-W${String(weekNum).padStart(2, "0")}`;
+}
+
 /** Build the effective prompt, optionally prepending skill pre-load and expert summon instructions. */
 function buildEffectivePrompt(task: Task): string {
 	let prefix = "";
@@ -220,7 +242,8 @@ export class TaskExecutor {
 			}
 			// Persist the session id for reuse mode: the next run will continue it.
 			if (sessionId !== undefined && task.reuseKinds !== undefined && task.reuseKinds.includes(task.kind)) {
-				await this.store.setLastSessionId(task.id, sessionId);
+				const period = task.reuseMode !== undefined ? computePeriodKey(task.reuseMode) : undefined;
+				await this.store.setLastSessionId(task.id, sessionId, period);
 			}
 			return await this.store.finishRun(run, task.id, {
 				...outcome,
@@ -250,11 +273,17 @@ export class TaskExecutor {
 		// Build the effective prompt, optionally prepending skill pre-load instructions.
 		const effectivePrompt = buildEffectivePrompt(task);
 
-		// Session reuse: try to continue an existing session from a prior run.
+		// Session reuse: try to continue an existing session from a prior run,
+		// but only if the current period (week/month) matches the last session's period.
 		if (task.reuseKinds !== undefined && task.reuseKinds.includes(task.kind) && task.lastSessionId !== undefined) {
-			const reused = await this.driveExistingAgent(task, effectivePrompt, agents);
-			if (reused !== undefined) return reused;
-			// Fall through to creating a fresh session if the existing one is gone.
+			const currentPeriod = task.reuseMode !== undefined ? computePeriodKey(task.reuseMode) : undefined;
+			const periodMatches = currentPeriod === undefined || task.lastSessionPeriod === currentPeriod;
+			if (periodMatches) {
+				const reused = await this.driveExistingAgent(task, effectivePrompt, agents);
+				if (reused !== undefined) return reused;
+				// Fall through to creating a fresh session if the existing one is gone.
+			}
+			// Period changed or no period key — create a fresh session for the new period.
 		}
 
 		const sessionId = SessionId(`scheduled-run-${randomUUID()}`);

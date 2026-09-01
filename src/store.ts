@@ -66,6 +66,8 @@ export interface TaskCreateInput {
 	skills?: string[];
 	/** Schedule kinds that reuse the last session instead of creating a new one each run. */
 	reuseKinds?: ("at" | "every" | "cron")[];
+	/** Session rotation rule: `weekly` or `monthly`; present only when reuseKinds is non-empty. */
+	reuseMode?: "weekly" | "monthly";
 	enabled?: boolean;
 	/** Optional start-of-day UTC instant from which the task is effective. */
 	effectiveFrom?: string;
@@ -94,6 +96,8 @@ export interface TaskUpdateInput {
 	skills?: string[] | null;
 	/** Set to replace, or `null`/empty to clear back to always-fresh. */
 	reuseKinds?: ("at" | "every" | "cron")[] | null;
+	/** Set to replace, or `null` to clear back to no rotation rule. */
+	reuseMode?: "weekly" | "monthly" | null;
 	enabled?: boolean;
 	/** Set to replace, or `null` to clear back to always-effective. */
 	effectiveFrom?: string | null;
@@ -247,6 +251,7 @@ export class TasksStore {
 			...(input.reuseKinds === undefined || input.reuseKinds.length === 0
 				? {}
 				: { reuseKinds: input.reuseKinds }),
+			...(input.reuseMode === undefined ? {} : { reuseMode: input.reuseMode }),
 			enabled: input.enabled ?? true,
 			state: "active",
 			...(effectiveFrom === undefined ? {} : { effectiveFrom }),
@@ -282,8 +287,21 @@ export class TasksStore {
 			else next.skills = patch.skills.map((s) => s.trim()).filter((s) => s.length > 0);
 		}
 		if (patch.reuseKinds !== undefined) {
-			if (patch.reuseKinds === null || patch.reuseKinds.length === 0) delete next.reuseKinds;
-			else next.reuseKinds = patch.reuseKinds;
+			if (patch.reuseKinds === null || patch.reuseKinds.length === 0) {
+				delete next.reuseKinds;
+				delete next.reuseMode;
+				delete next.lastSessionPeriod;
+			} else {
+				next.reuseKinds = patch.reuseKinds;
+			}
+		}
+		if (patch.reuseMode !== undefined) {
+			if (patch.reuseMode === null) {
+				delete next.reuseMode;
+				delete next.lastSessionPeriod;
+			} else {
+				next.reuseMode = patch.reuseMode;
+			}
 		}
 		if (patch.effectiveFrom !== undefined) {
 			if (patch.effectiveFrom === null) delete next.effectiveFrom;
@@ -295,7 +313,7 @@ export class TasksStore {
 		}
 		validateEffectiveRange(next.effectiveFrom, next.effectiveUntil);
 		if (patch.kind !== undefined) {
-			const { effectiveFrom: _ef, effectiveUntil: _eu, expert: _p, skills: _s, reuseKinds: _sm, ...patchRest } = patch;
+			const { effectiveFrom: _ef, effectiveUntil: _eu, expert: _p, skills: _s, reuseKinds: _sm, reuseMode: _rm, ...patchRest } = patch;
 			const target = resolveTaskTarget(
 				{
 					...existing,
@@ -320,11 +338,12 @@ export class TasksStore {
 		return next;
 	}
 
-	/** Patch only the `lastSessionId` field (used by the executor after a run). */
-	async setLastSessionId(id: string, sessionId: string): Promise<void> {
+	/** Patch the `lastSessionId` and `lastSessionPeriod` fields (used by the executor after a run). */
+	async setLastSessionId(id: string, sessionId: string, period?: string): Promise<void> {
 		const existing = this.tasks.get(TaskId(id));
 		if (existing === undefined) return;
 		const next: Task = { ...existing, lastSessionId: sessionId, updatedAt: nowInstant() };
+		if (period !== undefined) next.lastSessionPeriod = period;
 		await this.tasks.put(TaskId(next.id), next);
 	}
 

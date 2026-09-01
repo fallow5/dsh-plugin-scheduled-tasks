@@ -387,6 +387,8 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 	const promptRef = useRef<HTMLTextAreaElement>(null);
 	// Reuse kinds: which schedule types reuse the last session.
 	const [reuseKinds, setReuseKinds] = useState<("at" | "every" | "cron")[]>(() => initial?.reuseKinds ?? []);
+	// Reuse mode: session rotation rule (weekly/monthly).
+	const [reuseMode, setReuseMode] = useState<"weekly" | "monthly" | undefined>(() => initial?.reuseMode);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 
@@ -629,6 +631,9 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 		}
 		if (reuseKinds.length > 0) {
 			input = { ...input, reuseKinds };
+			if (reuseMode !== undefined) {
+				input = { ...input, reuseMode };
+			}
 		}
 		setBusy(true);
 		setError("");
@@ -645,7 +650,8 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 								...(modelKey === "" ? { model: null } : {}),
 								...(expertKey === "" ? { expert: null } : {}),
 								...(selectedSkills.length === 0 ? { skills: null } : {}),
-								...(reuseKinds.length === 0 ? { reuseKinds: null } : {}),
+								...(reuseKinds.length === 0 ? { reuseKinds: null, reuseMode: null } : {}),
+								...(reuseKinds.length > 0 && reuseMode === undefined ? { reuseMode: null } : {}),
 								...(effectiveFrom === "" ? { effectiveFrom: null } : {}),
 								...(effectiveUntil === "" ? { effectiveUntil: null } : {}),
 							} as unknown as UpdateInput,
@@ -992,6 +998,29 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 					{t("form.reuseSession")}
 				</label>
 				<div className={C.meta}>{t("form.reuseSessionHint")}</div>
+				{reuseKinds.includes(kind) && (
+					<div style={{ ...layout.row, gap: 12, marginTop: 6, flexWrap: "wrap" }}>
+						<span className={C.label} style={{ fontSize: 13 }}>{t("form.reuseMode")}</span>
+						<label style={{ cursor: "pointer", ...layout.row, gap: 4 }}>
+							<input
+								type="radio"
+								name="reuseMode"
+								checked={reuseMode === "weekly"}
+								onChange={() => setReuseMode("weekly")}
+							/>
+							{t("form.reuseModeWeekly")}
+						</label>
+						<label style={{ cursor: "pointer", ...layout.row, gap: 4 }}>
+							<input
+								type="radio"
+								name="reuseMode"
+								checked={reuseMode === "monthly"}
+								onChange={() => setReuseMode("monthly")}
+							/>
+							{t("form.reuseModeMonthly")}
+						</label>
+					</div>
+				)}
 			</div>
 			<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
 				<input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />{" "}
@@ -1300,7 +1329,7 @@ export function TasksOverlay(props: TasksOverlayProps) {
 												{task.skills !== undefined && task.skills.length > 0 &&
 													` · ${t("skills.used", { count: task.skills.length })}`}
 												{task.reuseKinds !== undefined && task.reuseKinds.length > 0 &&
-													` · ${t("reuseKinds.used")}`}
+													` · ${t("reuseKinds.used")}${task.reuseMode !== undefined ? `（${task.reuseMode === "weekly" ? t("form.reuseModeWeekly") : t("form.reuseModeMonthly")})` : ""}`}
 												{(task.effectiveFrom !== undefined || task.effectiveUntil !== undefined) &&
 													` · ${effectiveRangeText(t, task)}`}
 											</div>

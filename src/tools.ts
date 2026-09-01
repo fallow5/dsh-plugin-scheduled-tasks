@@ -104,6 +104,7 @@ const TASK_VIEW_SCHEMA = {
 		effectiveUntil: { type: "string" },
 		skills: { type: "array", items: { type: "string" } },
 		reuseKinds: { type: "array", items: { type: "string", enum: ["at", "every", "cron"] } },
+		reuseMode: { type: "string", enum: ["weekly", "monthly"] },
 		lastSessionId: { type: "string" },
 		createdAt: { type: "string", required: true },
 		updatedAt: { type: "string", required: true },
@@ -171,6 +172,7 @@ export function buildCreateInput(args: {
 	expert?: unknown;
 	skills?: unknown;
 	reuse_kinds?: unknown;
+	reuse_mode?: unknown;
 }): { input: TaskCreateInput } | { error: ToolError } {
 	if (typeof args.prompt !== "string" || args.prompt.trim().length === 0) {
 		return { error: { code: "invalid_prompt", message: "prompt must be a non-empty string." } };
@@ -261,6 +263,9 @@ export function buildCreateInput(args: {
 						),
 					}
 				: {}),
+			...(args.reuse_mode === "weekly" || args.reuse_mode === "monthly"
+				? { reuseMode: args.reuse_mode }
+				: {}),
 		},
 	};
 }
@@ -334,6 +339,11 @@ export function registerTaskTools(store: TasksStore, scheduler: TaskScheduler, a
 							type: "array",
 							items: { type: "string", enum: ["at", "every", "cron"] },
 							description: "Schedule kinds that reuse the last session instead of creating a new one each run (e.g. ['cron', 'every'] for periodic tasks).",
+						},
+						reuse_mode: {
+							type: "string",
+							enum: ["weekly", "monthly"],
+							description: "Session rotation rule: 'weekly' rotates sessions per ISO week, 'monthly' per calendar month. Only meaningful when reuse_kinds is non-empty.",
 						},
 					},
 					output: {
