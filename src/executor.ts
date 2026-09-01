@@ -464,7 +464,7 @@ async function renameRunSession(ctx: Context, session: { id: string }, task: Tas
 	if (periodKey !== undefined) {
 		// periodKey is like "2026-W35" (weekly) or "2026-08" (monthly).
 		const isWeekly = periodKey.includes("-W");
-		const label = isWeekly ? "周报" : "月报";
+		const label = isWeekly ? "日报" : "周报";
 		title = `🕐 [${periodKey}] ${label} · ${task.name}`;
 	} else {
 		title = `🕐 ${task.name}`;
