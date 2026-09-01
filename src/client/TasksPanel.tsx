@@ -979,46 +979,19 @@ function TaskForm({ tasks, workspaces, defaultProjectPath, initial, onSaved, onC
 				<div className={C.meta}>{t("form.skillsHint")}</div>
 			</div>
 			<div style={layout.field}>
-				<div className={C.label}>{t("form.reuseKinds")}</div>
-				<div className={C.meta}>{t("form.reuseKindsHint")}</div>
-				<div style={{ ...layout.row, flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-					<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
-						<input
-							type="checkbox"
-							checked={reuseKinds.includes("at")}
-							onChange={(event) =>
-								setReuseKinds((prev) =>
-									event.target.checked ? [...prev, "at"] : prev.filter((k) => k !== "at"),
-								)
-							}
-						/>
-						{t("form.reuseKindAt")}
-					</label>
-					<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
-						<input
-							type="checkbox"
-							checked={reuseKinds.includes("every")}
-							onChange={(event) =>
-								setReuseKinds((prev) =>
-									event.target.checked ? [...prev, "every"] : prev.filter((k) => k !== "every"),
-								)
-							}
-						/>
-						{t("form.reuseKindEvery")}
-					</label>
-					<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
-						<input
-							type="checkbox"
-							checked={reuseKinds.includes("cron")}
-							onChange={(event) =>
-								setReuseKinds((prev) =>
-									event.target.checked ? [...prev, "cron"] : prev.filter((k) => k !== "cron"),
-								)
-							}
-						/>
-						{t("form.reuseKindCron")}
-					</label>
-				</div>
+				<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
+					<input
+						type="checkbox"
+						checked={reuseKinds.includes(kind)}
+						onChange={(event) =>
+							setReuseKinds((prev) =>
+								event.target.checked ? [...prev, kind] : prev.filter((k) => k !== kind),
+							)
+						}
+					/>
+					{t("form.reuseSession")}
+				</label>
+				<div className={C.meta}>{t("form.reuseSessionHint")}</div>
 			</div>
 			<label style={{ cursor: "pointer", ...layout.row, gap: 6 }}>
 				<input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />{" "}
