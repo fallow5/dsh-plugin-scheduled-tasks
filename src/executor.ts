@@ -336,7 +336,10 @@ export class TaskExecutor {
 		// it to the workspace (plugin-created agents are not auto-attached) and
 		// pin a readable title. Both are best-effort.
 		await attachToWorkspace(ctx, task.projectPath, sessionId);
-		await renameRunSession(ctx, agent.session, task);
+		// When session rotation is enabled, append the period key to the title so
+		// each rotation period's session is distinguishable in the conversation list.
+		const currentPeriod = task.reuseMode !== undefined ? computePeriodKey(task.reuseMode) : undefined;
+		await renameRunSession(ctx, agent.session, task, currentPeriod);
 		const firstSeq = agent.session.seq;
 		const timeoutLabel = `${Math.round(this.config.runTimeoutMs / 60_000)} minutes`;
 		try {
@@ -454,11 +457,12 @@ async function attachToWorkspace(ctx: Context, projectPath: string, sessionId: s
 }
 
 /** Pin a readable title on the run session so the conversation list is informative. */
-async function renameRunSession(ctx: Context, session: { id: string }, task: Task): Promise<void> {
+async function renameRunSession(ctx: Context, session: { id: string }, task: Task, periodKey?: string): Promise<void> {
 	const sessionTitle = ctx.get("sessionTitle");
 	if (sessionTitle === undefined || typeof sessionTitle.rename !== "function") return;
+	const suffix = periodKey !== undefined ? ` [${periodKey}]` : "";
 	try {
-		sessionTitle.rename(session as Parameters<typeof sessionTitle.rename>[0], `⏰ ${task.name}`);
+		sessionTitle.rename(session as Parameters<typeof sessionTitle.rename>[0], `⏰ ${task.name}${suffix}`);
 	} catch (error) {
 		ctx.logger.warn(
 			`scheduled-tasks: could not rename run session "${session.id}": ${error instanceof Error ? error.message : String(error)}`,
