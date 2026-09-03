@@ -2,3 +2,4 @@ packages:
   - .
   - dsh-pin-sessions
   - dsh-session-shares
+  - dsh-soul

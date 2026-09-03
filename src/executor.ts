@@ -52,6 +52,15 @@ interface RunEvent {
 }
 
 /**
+ * Get session events in a backward-compatible way.
+ * DSH 0.1.2-alpha.4 removed the `events` getter from Session; use
+ * `snapshotEvents()` when available, falling back to `events` for older versions.
+ */
+function getSessionEvents(session: { events?: readonly RunEvent[]; snapshotEvents?: () => readonly RunEvent[] }): readonly RunEvent[] {
+	return typeof session.snapshotEvents === "function" ? session.snapshotEvents() : (session.events ?? []);
+}
+
+/**
  * Aggregate the last assistant text and turn outcome over an event window.
  *
  * The agent loop may have already started its first turn before the run prompt
@@ -359,7 +368,7 @@ export class TaskExecutor {
 				}),
 			);
 			await withTimeout(agent.whenIdle(), this.config.runTimeoutMs, `run timed out after ${timeoutLabel}`);
-			const summary = summarizeRun(agent.session.events, firstSeq);
+			const summary = summarizeRun(getSessionEvents(agent.session), firstSeq);
 			const status: RunStatus = summary.reason?.kind === "completed" ? "completed" : "failed";
 			const error = describeReason(summary.reason);
 			return {
@@ -421,7 +430,7 @@ export class TaskExecutor {
 				}),
 			);
 			await withTimeout(agent.whenIdle(), this.config.runTimeoutMs, `run timed out after ${timeoutLabel}`);
-			const summary = summarizeRun(agent.session.events, firstSeq);
+			const summary = summarizeRun(getSessionEvents(agent.session), firstSeq);
 			const status: RunStatus = summary.reason?.kind === "completed" ? "completed" : "failed";
 			const error = describeReason(summary.reason);
 			return {
