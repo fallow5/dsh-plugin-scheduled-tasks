@@ -316,6 +316,23 @@ export class TaskExecutor {
 						assembled: undefined,
 					});
 					await presets.mount(agentCtx, preset.id);
+					// After the preset mounts (which may register a deployment:persona section
+					// containing {{model}}/{{cwd}} template variables), register a last-resort
+					// system-prompt/assemble handler that guarantees those variables have values.
+					// installModelSelection already does this, but it runs BEFORE presets.mount in
+					// the waterfall; this ensures the override sticks even if a preset row's own
+					// assemble handler clears or rewrites variables.
+					agentCtx.on("system-prompt/assemble", async (_assembly, _context, next) => {
+						const assembled = await next();
+						return {
+							...assembled,
+							variables: {
+								...assembled.variables,
+								provider: selection.provider,
+								model: selection.model,
+							},
+						};
+					});
 				};
 			} else {
 				setup = (agentCtx) => {
